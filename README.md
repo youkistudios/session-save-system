@@ -1,81 +1,113 @@
 # Session Save System
 
-![Session Save System — it renames your messy chats and remembers what they did](assets/social-preview.png)
+![Session Save System — a local memory layer for working chats](docs/assets/session-save-header.svg)
 
-**It renames your messy chats — and remembers what they did.**
+**A local, human-triggered memory layer for Claude Code sessions.** Four
+commands turn a drifting chat into a named, indexed, resumable set of Markdown
+records you control.
 
-Your AI chat list is 20 untitled conversations ("CSS flexbox question" that became a full website build). Session Save System fixes that with four commands for **Claude Code** — type `/session` and the whole suite autocompletes:
+[Start with the usage guide](USAGE.md) ·
+[Read the safety model](docs/SAFETY-MODEL.md) ·
+[See the architecture](docs/ARCHITECTURE.md) ·
+[Open the site](https://youkistudios.github.io/session-save-system/)
 
-| Command | Alias | What it does |
+> Status: **v1.0, local instruction system.** Logging works anywhere Claude Code
+> can write files. Automatic chat rename/archive depends on host-provided session
+> tools and is not guaranteed.
+
+## The problem
+
+Working chats accumulate context but lose identity: titles drift, decisions hide
+in transcripts, and a new session cannot tell finished work from a half-built
+thread. Search helps only when you remember what to search for.
+
+Session Save System creates a compact file model instead: one session, one
+folder, one index row, and explicit state transitions.
+
+## Four commands, one habit
+
+| Command | Alias | Outcome |
 |---|---|---|
-| `/session-tag` | `/st` | **Tag this session** — names the chat for what it actually did, judges whether it's FINISHED / LIVE / STALE, saves a summary, and tells you what to run next. `/session-tag all` sweeps your whole chat list down to ≤5 recents. |
-| `/session-save` | `/ss` | **Checkpoint** — quick timestamped "here's where I'm at" so nothing's lost if the chat ends. |
-| `/session-summary` | `/ssum` | **Close out** — writes a readable summary + a technical resume-state, so any future chat can catch up cold. |
-| `/session-audit` | `/sa` | **Weekly bird's-eye** — reads the week's logs back: what you achieved, plans you never actioned, what to do next. |
+| `/session-tag` | `/st` | Name the session, capture its gist and assets, decide FINISHED / LIVE / STALE, then route onward |
+| `/session-save` | `/ss` | Append a small mid-session checkpoint; if used first, create one provisional index row |
+| `/session-summary` | `/ssum` | Write human and agent close-outs, then mark the existing row closed |
+| `/session-audit` | `/sa` | Read a week of summaries into a project-level report and prioritized next list |
 
-→ **New here? Read [USAGE.md](USAGE.md)** — when to use which command, with real scenarios.
+If you remember one command, use `/st` at the end of a working chat.
 
-## ⚡ How it's used — the gist
-
-- 🏷 **End of every working chat → type `/st`.** It reads the session, renames the chat for what it *actually did*, and tells you what to run next. That's the whole habit.
-- 💾 **Long session, stepping away → `/ss`.** One timestamped "here's where I'm at" block. Nothing is lost if the chat dies.
-- ✅ **Work finished → `/ssum`.** Two files: a summary you can read, a resume-state any future chat can load. Session closed, findable forever.
-- 🧹 **Chat list a mess → `/st all`.** Reviews every session, proposes names + keep/archive verdicts, waits for your approval. 20 chats → 5.
-- 📊 **Sunday → `/sa`.** One report: what you achieved this week, what you started and dropped, what to do Monday.
-
-**Bottom line:** one folder on your Desktop remembers every session — you just press save. 🗂
-
-Everything saves to **one folder on your Desktop** (`~/Desktop/session-logs/` by default). No second-brain, no database, no accounts — just well-structured markdown you own.
-
-## Install (60 seconds)
+## Install
 
 ```bash
-git clone https://github.com/youkistudios/session-save-system && cd session-save-system && ./install.sh
+git clone https://github.com/youkistudios/session-save-system
+cd session-save-system
+./install.sh
 ```
 
-That's it. Open any Claude session and type `/session-tag` (or just `/st`).
+To keep logs outside Desktop or iCloud, choose a location before installing:
 
-## How it works
-
-- **The name is the key.** `/st` names each session `<Project> Topic` (e.g. `Website Hero-Section`). That name becomes the chat title, the folder name, and the index row — so the chat list and the logs always agree.
-- **Projects are YOURS, discovered automatically.** No hardcoded categories — the first time you work on something new, `/st` proposes a project name (from your repo/folder/topic) and files everything under it. Your registry lives in `sessions/_PROJECTS.md`.
-- **One session = one record.** Re-running any command updates the same files (timestamped revisions), never duplicates.
-- **Honest verdicts.** FINISHED allows leftover follow-ups; LIVE means the core work itself is unfinished; STALE means you won't return. That's how your recents stay at 5 instead of 20.
-
-## Safety rules (built in, non-negotiable)
-
-1. **Archive, never delete** — archiving a chat is always reversible.
-2. **Capture before archive** — a chat is never archived until its knowledge is saved.
-3. **One record per session** — re-runs update in place, never fork duplicates.
-4. **Sweeps propose first** — `/st all` writes a review file for your approval; nothing is renamed or archived without your yes.
-
-## Folder layout (created on install)
-
-```
-~/Desktop/session-logs/
-  _INDEX.md                     ← one line per session, newest first — read this to catch up
-  GUIDE.md                      ← the rulebook the skills follow
-  sessions/
-    _PROJECTS.md                ← your auto-built project registry
-    <Project>/<date>_<slug>/    ← one folder per session
-      tag.md · checkpoints.md · human.md · agent.md
-  audits/
-    <year>-W<week>_audit.md     ← weekly bird's-eye reports
+```bash
+SAVE_SYSTEM_HOME="$HOME/Documents/session-logs" ./install.sh
 ```
 
-## Requirements — read this honestly
+The installer records exact SHA-256 identities for files it manages. It skips
+unrelated collisions, backs up managed files before replacement, and gives the
+uninstaller enough evidence to remove only byte-identical owned files.
 
-- **Claude Code** (CLI or desktop app). The installer copies skills into `~/.claude/` — the claude.ai consumer app can't install these.
-- **Chat renaming/archiving is automatic only where session-management tools exist** (the Claude Code desktop app). Everywhere else, `/session-tag` still does everything — reads the session, computes the truthful name, writes all logs — and hands you the title to set in one click. The logging system works 100% regardless; only the *automatic* rename is environment-dependent.
+## File model
 
-## Why manual save is a feature
+```text
+session-logs/
+├── _INDEX.md                         one row per session
+├── GUIDE.md                          operational rulebook
+├── sessions/
+│   ├── _PROJECTS.md                  user-approved registry
+│   └── <Project>/<date>_<slug>/
+│       ├── tag.md                    identity, gist, assets, verdict
+│       ├── checkpoints.md            append-only working state
+│       ├── human.md                  readable close-out
+│       └── agent.md                  technical resume state
+└── audits/<year>-W<week>_audit.md    weekly synthesis
+```
 
-This is Cmd-S, not autosave. You trigger it, so you know it happened — anyone who's lost a document to "autosave had it" knows the difference. The habit is one command at the end of a working chat: `/st`.
+`/st` normally creates the index row as open. If `/ss` comes first, it may
+create one clearly marked provisional row; `/st` upgrades that same row in
+place. `/ssum` closes an existing row and never creates a duplicate.
 
-## Privacy
+## Safety contract
 
-Your logs contain your work. They're plain markdown in a folder **you** own — nothing leaves your machine. Note: `~/Desktop` may be iCloud-synced on macOS; if you don't want your session logs in iCloud, install with `SAVE_SYSTEM_HOME` pointed somewhere unsynced.
+- **Archive, never delete.** Session-management actions remain reversible.
+- **Capture before archive.** Knowledge is saved before a chat leaves recents.
+- **One identity, one record.** Session id, then slug, resolves updates in place.
+- **Propose before sweep.** `/st all` writes a review and waits for approval.
+- **Prove before uninstall.** Only manifest-listed files whose current hashes
+  still match are removed; modified and unknown files are preserved.
+- **Logs are user data.** Install, uninstall, and repository validation never
+  remove the log home or backup directory.
 
-**Bonus:** the logs folder opens beautifully as an Obsidian vault — `_INDEX.md` becomes your dashboard. Zero setup, entirely optional.
+See [SAFETY-MODEL.md](docs/SAFETY-MODEL.md) for boundaries and recovery.
 
-MIT licensed. Built because 20 untitled chats is a solvable problem.
+## Validate locally
+
+```bash
+./tests/run.sh
+python3 scripts/generate_manifest.py
+python3 scripts/validate_repo.py
+```
+
+The isolated tests use temporary homes; they do not touch your Claude config or
+session logs. Workflow definitions are staged under `automation/workflows/` and
+remain inactive until a maintainer deliberately moves them into
+`.github/workflows/`.
+
+## Privacy and limits
+
+Records stay as local Markdown; the system contains no network client,
+telemetry, database, or account. Your chosen folder may still be synchronized
+by the operating system or another service. The skills summarize available
+session context; they cannot recover context that the host no longer exposes,
+guarantee a model’s summary is correct, or rename chats where session tools are
+absent.
+
+## License
+
+MIT © 2026 Youki Studios. See [LICENSE](LICENSE).

@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "components": [
+    {
+      "path": "skills/ and commands/",
+      "kind": "original-instruction-system",
+      "origin": "Youki Studios",
+      "license": "MIT"
+    },
+    {
+      "path": "install.sh, uninstall.sh, and tests/",
+      "kind": "original-local-safety-tooling",
+      "origin": "Youki Studios with disclosed AI assistance",
+      "license": "MIT"
+    },
+    {
+      "path": "docs/ and assets/",
+      "kind": "original-presentation-and-documentation",
+      "origin": "Youki Studios with disclosed AI assistance",
+      "license": "MIT"
+    }
+  ]
+}

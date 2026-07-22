@@ -35,7 +35,7 @@ A session's identity = its session id (stash in `tag.md` when available) with th
 - Folder: find it (id → slug) and reuse. Name changed? **Rename the existing folder** — never create a second. Ambiguous → ask.
 - `tag.md`/`human.md`/`agent.md`: refresh in place; bump `updated:` and append the run time to `revisions:` (entries are `MM-DD HH:MM` so multi-day sessions stay unambiguous). `human.md`/`agent.md` carry the same minimal frontmatter: `session_slug / project / date / updated / revisions / status`.
 - `checkpoints.md`: append a new `### <HH:MM>` block to the one file.
-- `_INDEX.md`: **one row per session, and `/st` owns creating it** — the row is born 🟢 open at first tag; `/ss` and `/ssum` only update it (`/ssum` flips it → ✅ closed). Update in place; never add a second row.
+- `_INDEX.md`: **one row per session.** `/st` normally creates it as 🟢 open. When `/ss` is the first command used, it may create one 🟡 provisional row after resolving the same session identity and folder; use gist `Checkpoint saved; run /st to tag this session.` and do not invent a verdict. A later `/st` updates that row in place to 🟢 open. `/ssum` never creates a row; it updates the existing row to ✅ closed. Never add a second row.
 - `status:` in `tag.md` mirrors the index: `/st` writes `open`; **`/ssum` flips it to `closed`** (one truth, two surfaces).
 
 ## `/st` — the triage gate (run at session end, before anything else)
@@ -87,7 +87,7 @@ Set the chat title via the session tools if available (always confirm with the u
 List sessions → group by project → rank by staleness. **Write `_SWEEP-REVIEW.md` FIRST** (read-only proposal: current title · suggested name · last active · disposition ✅ keep / 📦 archive / ⚠️ your-call / ✂️ rename + an approvals checklist). A real FINISHED/LIVE/STALE verdict needs a log to read — un-logged chats get *staleness + obvious-duplicate* flags only, stated as such. On approval: rename/archive **one by one**. Never delete. Target ≤5 active per project. **Never archive a chat whose knowledge isn't captured — close it out first.**
 
 ## `/ss` — checkpoint
-Append `### <HH:MM> — **Now** … / **Working on** … / **Next** … / **Watch** …` (~100–300 words — it's a quick checkpoint, not an essay) to the session's `checkpoints.md`. Ensure the session's one `_INDEX` row exists (🟢 open).
+Append `### <HH:MM> — **Now** … / **Working on** … / **Next** … / **Watch** …` (~100–300 words — it's a quick checkpoint, not an essay) to the session's `checkpoints.md`. Ensure the session's one `_INDEX` row exists. If `/ss` runs before `/st`, create the single 🟡 provisional row defined under Idempotency; `/st` must update it rather than prepend another row.
 
 ## `/ssum` — close-out
 Write `human.md` (~500w: `## GIST` promoted verbatim from tag.md if `/st` ran — verbatim = same content, reformatting into bullets is fine, rewording is not — + bottom line · `## Assets` · Problems · Solutions · Achieved · Actioned · Insights · Next) + `agent.md` (~500w technical: state, decisions+why, proven vs unproven, open threads). If `checkpoints.md` contradicts the tag (work moved on since a checkpoint), the tag wins — note the reconciliation in `agent.md`. Update the `_INDEX` row → ✅ closed AND flip `tag.md`'s `status:` → closed. Honest state, not a highlight reel.
