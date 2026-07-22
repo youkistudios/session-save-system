@@ -2,7 +2,7 @@
 
 All notable changes to Session Save System are documented here.
 
-## Unreleased
+## 1.1.0 — 2026-07-23
 
 - Replace heuristic text-search ownership with an exact SHA-256 install
   manifest and allowlisted uninstall behavior.
