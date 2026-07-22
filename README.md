@@ -11,7 +11,7 @@ records you control.
 [See the architecture](docs/ARCHITECTURE.md) ·
 [Open the site](https://youkistudios.github.io/session-save-system/)
 
-> Status: **v1.0, local instruction system.** Logging works anywhere Claude Code
+> Status: **v1.1, local instruction system.** Logging works anywhere Claude Code
 > can write files. Automatic chat rename/archive depends on host-provided session
 > tools and is not guaranteed.
 
