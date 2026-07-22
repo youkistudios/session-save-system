@@ -11,7 +11,7 @@ description: Session Save System triage gate. `/session-tag` (alias `/st`) — a
 1. **Project** (guide → "Projects"): match against `sessions/_PROJECTS.md`; if new, propose a name derived from repo/folder/deliverable/topic — never silently invent. On approval, register it.
 2. **Name = slug** (guide → "Naming"): `<Project> Topic`, purpose-beats-work-done; folder `sessions/<Project>/<DATE>_<slug>/` — find by id/slug and update in place, never fork. Unsure → 3 choices + "name it yourself".
 3. **Arcs** (guide → "Arcs"): default ONE; split only on work-target change AND (new assets OR new day).
-4. **Write `tag.md`** per the guide template — idempotent (`updated:` + `revisions:` on re-run). **`/st` owns the `_INDEX.md` row:** create it 🟢 open at first tag (one row per session, update in place on re-runs).
+4. **Write `tag.md`** per the guide template — idempotent (`updated:` + `revisions:` on re-run). **`/st` owns the authoritative `_INDEX.md` row:** create it 🟢 open when absent, or upgrade the 🟡 provisional row created by an earlier `/ss`; update in place on re-runs.
 5. **Verdict + roll-up** (guide → "Verdict"): finished allows follow-ups; roll-up by routing precedence (live > all-stale > finished).
 6. **Route + apply the name** (on the user's OK): FINISHED → offer `/ssum` · LIVE → offer `/ss` · STALE → offer archive-stub. Set the chat title via session tools if available (confirm); else print it for manual setting.
 7. **Print the tidy `/st` block** (guide → "Chat output format"). Dot points, not prose.

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Session Save System is a local Markdown memory layer for Claude Code sessions.">
+  <meta name="theme-color" content="#071b1d">
+  <title>Session Save System — save the state, keep the thread</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header><a class="logo" href="#top">SESSION//SAVE</a><nav aria-label="Primary"><a href="#commands">Commands</a><a href="#model">File model</a><a href="#safety">Safety</a><a class="git" href="https://github.com/youkistudios/session-save-system">Get the system ↗</a></nav></header>
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="status"><i></i> LOCAL-FIRST · MANUAL SAVE · PLAIN MARKDOWN</div>
+      <h1>Save the state.<br><span>Keep the thread.</span></h1>
+      <p>Four commands turn drifting AI work into named, indexed, resumable records—without an account, database, or background collector.</p>
+      <div class="hero-actions"><a class="cta" href="https://github.com/youkistudios/session-save-system#install">Install in 60 seconds</a><a href="#commands">See the four moments ↓</a></div>
+      <div class="terminal" aria-label="Example session workflow"><div class="dots"><i></i><i></i><i></i><span>session / active</span></div><code><b>you</b> /st<br><em>🏷 Portfolio Release · LIVE</em><br><br><b>system</b> Knowledge captured. Mobile QA remains.<br><b>route</b> → /ss<br><br><b>you</b> /ss<br><em>💾 Checkpoint saved · 16:42</em></code></div>
+    </section>
+
+    <section class="manifesto"><p>Chats are temporary interfaces.</p><h2>Your work deserves a durable address.</h2></section>
+
+    <section id="commands" class="section"><div class="heading"><span>01 / FOUR MOMENTS</span><h2>A small command for every state change.</h2></div><div class="command-grid">
+      <article><div class="key red">/st</div><h3>Tag</h3><p>Name what the session actually became. Capture gist and assets. Decide whether the core work is finished, live, or stale.</p><small>THE ROUTER</small></article>
+      <article><div class="key amber">/ss</div><h3>Save</h3><p>Append the current state, next move, and watch-outs. If it runs first, create one provisional index row—not a guessed verdict.</p><small>THE CHECKPOINT</small></article>
+      <article><div class="key green">/ssum</div><h3>Close</h3><p>Write a human summary and technical resume state, then move the existing session record from open to closed.</p><small>THE HANDOFF</small></article>
+      <article><div class="key blue">/sa</div><h3>Audit</h3><p>Read a week of saved summaries across projects. Surface achievements, dropped plans, dependencies, and what to do next.</p><small>THE BIRD'S-EYE</small></article>
+    </div></section>
+
+    <section id="model" class="model"><div class="heading"><span>02 / FILE MODEL</span><h2>Readable without the product.</h2><p>Every record remains ordinary Markdown. Open it in a text editor, search it with shell tools, or browse it as a vault.</p></div><div class="tree"><code><b>session-logs/</b><br>├── <mark>_INDEX.md</mark> <i>one row per session</i><br>├── GUIDE.md <i>one operational rulebook</i><br>├── sessions/<br>│&nbsp;&nbsp; ├── _PROJECTS.md<br>│&nbsp;&nbsp; └── Project/date_slug/<br>│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── tag.md <i>identity + verdict</i><br>│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── checkpoints.md <i>working state</i><br>│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ├── human.md <i>readable close-out</i><br>│&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; └── agent.md <i>resume state</i><br>└── audits/week.md</code></div></section>
+
+    <section id="safety" class="section safety"><div class="heading"><span>03 / SAFETY</span><h2>Your records are not installer debris.</h2></div><div class="safety-grid"><article><b>Exact identity</b><p>Installed files receive SHA-256 manifest entries. Product words inside a file are never treated as ownership proof.</p></article><article><b>Recoverable replacement</b><p>Previously managed files are copied to a timestamped backup before an update replaces them.</p></article><article><b>Proof before removal</b><p>Uninstall removes only allowlisted regular files whose current hash still matches. Modified files survive.</p></article><article><b>Separate data boundary</b><p>The log home and backup tree are never uninstall targets. User data stays user-owned.</p></article></div></section>
+
+    <section class="limit"><span>HONEST LIMIT</span><p>The system can preserve the context a host makes available. It cannot reconstruct missing history, guarantee a model summary is correct, or automate chat controls the host does not expose.</p></section>
+  </main>
+  <footer><div><b>Session Save System</b><p>Local continuity for AI-assisted work.</p></div><p><a href="https://github.com/youkistudios/session-save-system/blob/main/docs/SAFETY-MODEL.md">Safety model</a> · <a href="https://github.com/youkistudios/session-save-system/blob/main/PROVENANCE.md">Provenance</a> · MIT</p></footer>
+</body>
+</html>

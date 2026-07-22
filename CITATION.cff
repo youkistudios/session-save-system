@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If Session Save System informs your work, please cite this software."
+title: "Session Save System"
+type: software
+authors:
+  - name: "Youki Studios"
+version: 1.0.0
+date-released: 2026-07-17
+url: "https://github.com/youkistudios/session-save-system"
+repository-code: "https://github.com/youkistudios/session-save-system"
+license: MIT

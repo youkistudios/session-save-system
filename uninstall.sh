@@ -1,20 +1,71 @@
 #!/bin/sh
-# Session Save System uninstaller — removes skills + commands. NEVER touches your logs.
-set -e
-SKILLS_DIR="$HOME/.claude/skills"
-COMMANDS_DIR="$HOME/.claude/commands"
+# Session Save System uninstaller — removes only hash-proven managed files.
+set -eu
+
+CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-"$HOME/.claude"}
+MANIFEST=$CLAUDE_DIR/session-save-system.manifest
+TMP_REMAINING=$(mktemp "${TMPDIR:-/tmp}/session-save-remaining.XXXXXX")
+trap 'rm -f "$TMP_REMAINING"' EXIT HUP INT TERM
+
+hash_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    sha256sum "$1" | awk '{print $1}'
+  fi
+}
+
+is_allowed_path() {
+  case "$1" in
+    skills/session-tag/SKILL.md|skills/session-save/SKILL.md|skills/session-summary/SKILL.md|skills/session-audit/SKILL.md|commands/session-tag.md|commands/session-save.md|commands/session-summary.md|commands/session-audit.md|commands/st.md|commands/ss.md|commands/ssum.md|commands/sa.md|save-system-home) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 echo "Session Save System uninstaller"
-for s in session-tag session-save session-summary session-audit; do
-  if [ -e "$SKILLS_DIR/$s" ] && grep -q "Session Save System" "$SKILLS_DIR/$s/SKILL.md" 2>/dev/null; then
-    rm -rf "$SKILLS_DIR/$s"; echo "  removed skill: $s"
+if [ -L "$MANIFEST" ] || { [ -e "$MANIFEST" ] && [ ! -f "$MANIFEST" ]; }; then
+  echo "  ownership manifest is not a regular file; nothing was removed"
+  exit 0
+fi
+if [ ! -f "$MANIFEST" ]; then
+  echo "  no ownership manifest found; nothing was removed"
+  echo "  legacy or unrelated files require manual review"
+  exit 0
+fi
+
+while IFS="$(printf '\t')" read -r expected relative; do
+  [ -n "$expected" ] && [ -n "$relative" ] || continue
+  if ! is_allowed_path "$relative"; then
+    echo "  preserved unrecognized manifest path: $relative"
+    printf '%s\t%s\n' "$expected" "$relative" >> "$TMP_REMAINING"
+    continue
   fi
-done
-for c in session-tag session-save session-summary session-audit st ss ssum sa; do
-  if [ -e "$COMMANDS_DIR/$c.md" ] && grep -q "session-" "$COMMANDS_DIR/$c.md" 2>/dev/null; then
-    rm -f "$COMMANDS_DIR/$c.md"; echo "  removed command: /$c"
+
+  target=$CLAUDE_DIR/$relative
+  if [ ! -e "$target" ]; then
+    echo "  already absent: $relative"
+  elif [ -L "$target" ] || [ ! -f "$target" ]; then
+    echo "  preserved non-file target: $relative"
+    printf '%s\t%s\n' "$expected" "$relative" >> "$TMP_REMAINING"
+  elif [ "$(hash_file "$target")" = "$expected" ]; then
+    rm -f "$target"
+    echo "  removed verified file: $relative"
+    case "$relative" in
+      skills/*/SKILL.md) rmdir "$(dirname "$target")" 2>/dev/null || true ;;
+    esac
+  else
+    echo "  preserved modified file: $relative"
+    printf '%s\t%s\n' "$expected" "$relative" >> "$TMP_REMAINING"
   fi
-done
-rm -f "$HOME/.claude/save-system-home"
+done < "$MANIFEST"
+
+if [ -s "$TMP_REMAINING" ]; then
+  cp "$TMP_REMAINING" "$MANIFEST"
+  echo "  manifest retained for files that were not removed"
+else
+  rm -f "$MANIFEST"
+  echo "  ownership manifest removed"
+fi
+
 echo ""
-echo "✅ Uninstalled. Your logs folder was NOT touched — it's yours, delete it manually if you want."
+echo "Uninstall complete. Session logs and installer backups were not touched."

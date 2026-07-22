@@ -9,6 +9,9 @@ description: Session Save System mid-session checkpoint. `/session-save` (alias 
 
 - Session folder: `sessions/<Project>/<DATE>_<slug>/` — reuse the session's existing folder (guide → "Idempotency"); if none exists yet, derive project + slug per the guide (ask on real ambiguity, never invent folders elsewhere).
 - Append `### <HH:MM> — **Now** … / **Working on** … / **Next** … / **Watch** …` (~200–400 words) to `<folder>/checkpoints.md` (create with simple frontmatter on first write). Re-runs append another timestamped block to the SAME file — never a new file.
-- Ensure exactly one 🟢 open row for this session in `_INDEX.md` (update, don't duplicate).
+- Ensure exactly one index row for this session. If `/st` already ran, update
+  its 🟢 open row. If `/ss` is the first command, create one 🟡 provisional row
+  using gist `Checkpoint saved; run /st to tag this session.`; `/st` later
+  upgrades that same row in place. Never invent a verdict or duplicate the row.
 - Do NOT write the close-out reports here — that's `/ssum`.
 - **Print the tidy `/ss` block** (guide → "Chat output format"): 💾 Checkpoint · Name · time / Now · Next · Watch / 📍 path.

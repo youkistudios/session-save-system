@@ -1,0 +1,31 @@
+name: Safety or workflow defect
+description: Report reproducible behavior using synthetic data
+title: "[bug] "
+labels: [bug]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [installer, uninstaller, session-tag, session-save, session-summary, session-audit, packaging or docs]
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Synthetic reproduction and observed behavior
+      description: Do not include real logs, personal data, or secrets.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and shell
+    validations:
+      required: true
