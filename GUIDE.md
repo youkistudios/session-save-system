@@ -1,129 +1,262 @@
-# Save System — the Rulebook
+# Session Save — Shared Rulebook
 
-> **Single source of truth.** The four skills — `/session-tag` (`/st`), `/session-save` (`/ss`), `/session-summary` (`/ssum`), `/session-audit` (`/sa`) — are thin triggers that defer to this file. Full names are canonical; abbreviations are aliases with identical behavior. If a skill's behavior would drift from this guide, the guide wins.
+> **Single source of behavioral truth.** Claude Code and Codex use the same four moments: session-tag, session-save, session-summary, and session-audit. Installed skills are thin client adapters. This guide owns identity, naming, state, content, provenance, and safety.
 
-## Home folder
-Resolve in this order: **(1)** the path in `~/.claude/save-system-home` (written by the installer — env vars don't reach Claude sessions), **(2)** `SAVE_SYSTEM_HOME` if set, **(3)** `~/Desktop/session-logs/`. **If the folder doesn't exist yet, create it** (with `sessions/`, `audits/`, a blank `_INDEX.md` and `sessions/_PROJECTS.md`) rather than failing or writing elsewhere. Never write session logs anywhere else. All paths below are relative to home.
+## Product boundary
 
+Session Save is client-neutral local memory, not transcript synchronization. Each supported client captures only context it can currently access. All records live in one user-approved home, remain ordinary Markdown/JSON, and retain the client that authored them.
+
+The implemented support contract is Claude Code + Codex local clients. Other clients are not claimed.
+
+## Shared home
+
+The kernel resolves home in this order:
+
+1. explicit `--home` (tests and administration);
+2. `SESSION_SAVE_HOME`, then legacy `SAVE_SYSTEM_HOME`;
+3. `~/.config/session-save/config.json`;
+4. the legacy `~/.claude/save-system-home` pointer during transition;
+5. `~/Desktop/session-logs/`.
+
+GUI applications may not inherit shell variables, so the shared config is canonical after installation. If the home does not exist, the kernel creates only the required structure. Never write records elsewhere after a successful resolution.
+
+```text
+session-logs/
+├── GUIDE.md
+├── config.json                       optional portable copy
+├── _INDEX.md                         generated; never edit directly
+├── sessions/
+│   ├── _PROJECTS.md
+│   └── <project>/
+│       ├── claude/<date>_<slug>/
+│       │   ├── record.json
+│       │   ├── tag.md
+│       │   ├── checkpoints/<timestamp>_<event>.md
+│       │   ├── human.md
+│       │   └── agent.md
+│       └── codex/<date>_<slug>/...
+├── events/<date>/<timestamp>_<event>.json
+├── audits/global/<YYYY>-W<week>_audit.md
+└── .session-save/                    schema, views, migration receipts
 ```
-_INDEX.md                       ← one line per session, newest first (read FIRST to catch up)
-GUIDE.md                        ← this file
-sessions/_PROJECTS.md           ← the project registry (auto-built, user-approved)
-sessions/<Project>/<YYYY-MM-DD>_<slug>/
-  tag.md          ← /st     name · gist (per arc) · assets · verdict (compute-once handoff)
-  checkpoints.md  ← /ss     running timestamped notes
-  human.md        ← /ssum   readable capture (inherits tag.md's gist)
-  agent.md        ← /ssum   technical resume-state
-audits/<YYYY>-W<week>_audit.md  ← /session-audit (/sa) weekly bird's-eye
-```
+
+A client directory appears only after that client writes its first record for a project.
+
+## Client and model identity
+
+- `client_id` identifies the application surface: currently `claude` or `codex`.
+- `model_id` is optional metadata only when the host exposes it reliably.
+- Storage is namespaced by client, never by a guessed model.
+- A Cursor session running Claude would not be a Claude Code record; client and model are different concepts.
+- Never claim client identity from prose. The installed `CLIENT.md` adapter supplies it.
 
 ## Projects — discovered, never hardcoded
-There is no fixed category list. A **project** is whatever the user actually works on, discovered at tag time:
-1. Check `sessions/_PROJECTS.md` — does this session belong to an existing project? Use it.
-2. If not, derive a candidate from (in order): the repo/folder name being worked in · the deliverable's own name · the dominant topic. Propose it: *"New project '<Name>'? Or file under: <existing 1> / <existing 2> / name it yourself."* Never silently invent a project.
-3. On approval, add one line to `_PROJECTS.md`: `- **<Name>** — <one-line description> (first: <date>)`.
-Keep project names short (1–2 words, Title Case). **Project FOLDER name = the project name with spaces → hyphens** (`Job Search` → `sessions/Job-Search/`) — no spaces in paths. If the user can't be asked mid-run, use the best candidate and mark it `(unconfirmed)` in the registry; confirm on the next run. A session spanning two projects files under the dominant one, with the cross-link noted in `tag.md`.
 
-## Naming — the name IS the key
-`<Project> Topic`, topic 1–3 words. One name, three surfaces: the chat title, the folder slug (kebab-case of the name), the `_INDEX` row.
-- **Purpose beats work-done.** Name the session for what it exists to produce; if it pivoted, keep the purpose and note the pivot in the gist. Never overwrite a user-set title without checking — a title counts as user-given only if the user typed or confirmed it; auto-generated titles are freely overwritable.
-- **Repeats must disambiguate.** `Website Hero-Section`, never `Website Build 2`.
-- Low confidence → offer **3 choices + "name it yourself."**
+A project is whatever the user actually works on.
 
-## Idempotency — one session, ONE record
-A session's identity = its session id (stash in `tag.md` when available) with the slug as fallback. Re-running any command **updates the existing record**:
-- Folder: find it (id → slug) and reuse. Name changed? **Rename the existing folder** — never create a second. Ambiguous → ask.
-- `tag.md`/`human.md`/`agent.md`: refresh in place; bump `updated:` and append the run time to `revisions:` (entries are `MM-DD HH:MM` so multi-day sessions stay unambiguous). `human.md`/`agent.md` carry the same minimal frontmatter: `session_slug / project / date / updated / revisions / status`.
-- `checkpoints.md`: append a new `### <HH:MM>` block to the one file.
-- `_INDEX.md`: **one row per session.** `/st` normally creates it as 🟢 open. When `/ss` is the first command used, it may create one 🟡 provisional row after resolving the same session identity and folder; use gist `Checkpoint saved; run /st to tag this session.` and do not invent a verdict. A later `/st` updates that row in place to 🟢 open. `/ssum` never creates a row; it updates the existing row to ✅ closed. Never add a second row.
-- `status:` in `tag.md` mirrors the index: `/st` writes `open`; **`/ssum` flips it to `closed`** (one truth, two surfaces).
+1. Check `sessions/_PROJECTS.md` for a match.
+2. Otherwise derive a candidate from repository/folder, deliverable, then dominant topic.
+3. Propose the candidate and nearby existing projects. Never silently invent one when the user can answer.
+4. Register an approved project with a one-line description and first date.
 
-## `/st` — the triage gate (run at session end, before anything else)
-Computes `{name, project, gist, verdict, assets}` ONCE into `tag.md`; everything downstream reads it.
+Project display names remain short. The kernel creates a safe lowercase folder slug. Cross-client work uses the same project display name so audits can aggregate it.
 
-### tag.md
+## Naming
+
+Name each client session `<Project> Topic`, with a one-to-three-word topic.
+
+- Purpose beats work-done.
+- If the session pivots, preserve its core purpose and name the pivot in the gist.
+- Repeated sessions must disambiguate by purpose, not “2”.
+- Low confidence means three choices plus “name it yourself.”
+- Rename a chat only when that client exposes the capability and the user confirms.
+
+## Identity — one record per client session
+
+A record has a globally unique `record_id`. Reuse resolves by:
+
+1. `client_id + provider_session_id` when a stable real ID is available;
+2. `client_id + session_slug` otherwise;
+3. explicit user resolution on ambiguity.
+
+Never invent a provider session ID. Never merge records merely because Claude and Codex used similar names. Cross-client continuation may be referenced, but each source record remains intact.
+
+`record.json` is the machine identity envelope. Narrative truth remains in Markdown. Skills never overwrite or hand-edit `record.json`; they use the kernel.
+
+## State model
+
+```text
+no record ── tag ───────► open ── summary ──► closed
+     └────── save ──────► provisional ── tag ──► open
+                                      └── save ─► provisional
+open ─────── save ──────► open
 ```
+
+Session-summary requires an existing tagged record and never creates one. Stale records remain preserved and may be marked `stale`; archive never means delete.
+
+## Concurrency and derived views
+
+Claude and Codex may write at the same time.
+
+- Each writes only inside its own record namespace.
+- Checkpoints are immutable uniquely named files, not appends to one shared file.
+- Every operation emits a uniquely named event receipt.
+- `_INDEX.md` is rebuilt from `record.json` envelopes through an atomic replace.
+- A failed index rebuild cannot invalidate a source record.
+- `session_save.py rebuild` restores the index at any time.
+
+The index contains state, updated time, project, client, name, gist, and record path. Project is primary for human scanning; client provenance is always visible.
+
+## session-tag — triage gate
+
+Compute `{name, project, gist, verdict, assets}` once into `tag.md`. Downstream summaries read it.
+
+### Arcs
+
+Default to one arc. A second arc exists only when the work target changes and either new assets appear or a day boundary is crossed. Design → build → review of the same deliverable is one arc.
+
+### Verdict
+
+Ask whether the core intent is achieved—not whether any follow-up exists.
+
+- **finished:** core work done; follow-ups may remain.
+- **live:** core work remains in flight and would be resumed.
+- **stale:** dead or superseded.
+
+Routing precedence: any live arc → LIVE; else all stale → STALE; else FINISHED.
+
+### `tag.md`
+
+```markdown
 ---
 session_slug: <slug>
-session_id: <if available>
+provider_session_id: <only when real>
+client_id: claude|codex
+model_id: <optional>
 project: <Project>
 name: "<Project> Topic"
 verdict: finished|live|stale
 date: <YYYY-MM-DD>
-updated: <YYYY-MM-DD HH:MM>
-revisions: [<HH:MM>, ...]
-status: open|closed
+updated: <ISO timestamp>
+revisions: [<timestamp>, ...]
+status: open|closed|stale
+record_id: <from record.json>
 ---
 # <Name> — session tag
 
 ## Arc 1 — <Title> (<date>) [<kind>] → finished|live|stale
-Gist (3–5): • … • … • …
-Assets: • <name> — <file> — <one-line value>
-[Still to do (≤3): • …   ← only if live]
+Gist: • … • … • …
+Assets: • <name> — <real file or “in chat”> — <value>
 
 ## Session verdict: <FINISHED|LIVE|STALE> — <one sentence>
-## Route: /ssum | /ss | archive-stub
+## Route: session-summary | session-save | archive guidance
 ```
 
-### Arcs (default = ONE)
-A second arc sparks ONLY when the **work-target changes** AND (**new assets appear** OR a **day boundary** is crossed). Phases of the same deliverable (design→build, plan→execute) are ONE arc. Test: "different thing, or the next phase of the same thing?" Next phase → one arc.
+Assets in chat are explicitly marked because they are not durable files.
 
-### Assets ledger
-Each arc lists what it left behind: `<name> — <file> — <one-line value>`. Chat-only deliverables (no file) are listed as `<name> — (in chat) — <value>` — and flagged, since anything not in a file is one closed tab from gone. This makes logs searchable by *what got built*, not just discussed.
+### Sweep
 
-### Verdict per arc — decouple "has follow-ups" from LIVE
-Test: **is the core intent achieved?** — NOT "is anything left?"
-- **finished** — core work done; follow-ups allowed (they go to Next).
-- **live** — the core work itself is mid-flight; you'd resume it next session. Tie-break: **if the user explicitly says they'll continue this work, it's live.**
-- **stale** — dead or superseded; you won't return.
+A sweep is client-local because no adapter may pretend it can see another client’s chat list. Write `_SWEEP-REVIEW.md` before any action. Unlogged chats receive only staleness/duplicate flags, not fabricated verdicts. Wait for approval; archive one by one; never delete; capture before archive.
 
-### Roll-up + routing (precedence, not "least-done")
-Any arc `live` → **LIVE → `/ss`**. Else all `stale` → **STALE → archive-stub** (one `_INDEX` line, no full close-out). Else → **FINISHED → `/ssum`**. If a stale arc rides with finished ones, name it in the tag so it isn't buried.
+## session-save — checkpoint
 
-### Applying the name
-Set the chat title via the session tools if available (always confirm with the user). If unavailable, print the name and ask the user to set it.
+Write approximately 100–300 words to the unique checkpoint path allocated by the kernel:
 
-## `/st all` — the sweep
-List sessions → group by project → rank by staleness. **Write `_SWEEP-REVIEW.md` FIRST** (read-only proposal: current title · suggested name · last active · disposition ✅ keep / 📦 archive / ⚠️ your-call / ✂️ rename + an approvals checklist). A real FINISHED/LIVE/STALE verdict needs a log to read — un-logged chats get *staleness + obvious-duplicate* flags only, stated as such. On approval: rename/archive **one by one**. Never delete. Target ≤5 active per project. **Never archive a chat whose knowledge isn't captured — close it out first.**
+```markdown
+### <HH:MM> — <client_id>
 
-## `/ss` — checkpoint
-Append `### <HH:MM> — **Now** … / **Working on** … / **Next** … / **Watch** …` (~100–300 words — it's a quick checkpoint, not an essay) to the session's `checkpoints.md`. Ensure the session's one `_INDEX` row exists. If `/ss` runs before `/st`, create the single 🟡 provisional row defined under Idempotency; `/st` must update it rather than prepend another row.
-
-## `/ssum` — close-out
-Write `human.md` (~500w: `## GIST` promoted verbatim from tag.md if `/st` ran — verbatim = same content, reformatting into bullets is fine, rewording is not — + bottom line · `## Assets` · Problems · Solutions · Achieved · Actioned · Insights · Next) + `agent.md` (~500w technical: state, decisions+why, proven vs unproven, open threads). If `checkpoints.md` contradicts the tag (work moved on since a checkpoint), the tag wins — note the reconciliation in `agent.md`. Update the `_INDEX` row → ✅ closed AND flip `tag.md`'s `status:` → closed. Honest state, not a highlight reel.
-
-## `/session-audit` (`/sa`) — weekly bird's-eye
-Read the window's `tag.md`/`human.md` files (summaries, never raw transcripts) → group by project → per project: **Achieved · Open plans not actioned · High-value assets · Live threads** → cross-project dependencies → prioritized next actions. **Surface close-out debt:** a FINISHED session with no `human.md` gets named explicitly (its knowledge isn't banked yet). Write `audits/<YYYY>-W<week>_audit.md` (ISO week, zero-padded: `W05`, `W29`). Read-only over the logs. An audit that says "all good" every week is theatre.
-
-## Chat output format (every skill prints this way)
-Skimmable blocks — bold labels, dot points, a route line. The detail lives in files, not chat.
-
-**/session-tag:**
+- **Now:** …
+- **Working on:** …
+- **Next:** …
+- **Watch:** …
 ```
-🏷 <Name> · <Project> · <FINISHED|LIVE|STALE>
-What happened
-• …  • …  • …
-Assets
-• <name> — <file> — <value>
-Verdict: <one line>
-→ Route: /ssum (or /ss · archive)
-```
-**/session-save:**
-```
-💾 Checkpoint — <Name> · <HH:MM>
-• Now: …   • Next: …   • Watch: …
-📍 <folder path>
-```
-**/session-summary:**
-```
-✅ Closed — <Name> (<Project>)
-Achieved
-• …  • …
-Open / next
-• …
-📁 human.md · agent.md   ·   🔖 updated <timestamp>
-```
-**/session-audit:** the audit's `## GIST` (5 facts + bottom line) + `📁 <audit path>`.
 
-## Safety invariants (non-negotiable)
-1. **Archive, never delete.** 2. **Capture-before-archive.** 3. **Find-by-id/slug, update-in-place — never fork a duplicate.** 4. **Sweeps propose first; the review file is read-only until approved.**
+If Save runs first, create one provisional record with gist:
+
+`Checkpoint saved; run session-tag to tag this session.`
+
+A later tag upgrades that same client record. An open record stays open after more checkpoints. Never write a close-out here.
+
+## session-summary — close-out
+
+Require the existing `tag.md`. Write two files in place:
+
+- `human.md`: promoted GIST from tag, bottom line, assets, problems, solutions, achieved, actioned, insights, and next.
+- `agent.md`: technical state, decisions and reasons, proven versus unproven, client source, reconciliation against later checkpoints, and open threads.
+
+Refresh these files on rerun and append revision timestamps. Then use the kernel to mark the record closed and rebuild views. Honest state beats a highlight reel.
+
+## session-audit — cross-client bird’s-eye
+
+Default window is seven days. Gather sources through the kernel, then read `record.json`, `tag.md`, and `human.md` only—never raw transcripts.
+
+Group by project first. Within each project include:
+
+- Achieved
+- Open plans not actioned
+- High-value assets
+- Live threads and pending decisions
+
+Prefix factual bullets with `[Claude]`, `[Codex]`, or the returned client ID and link the record path. Surface contradictions between client records instead of silently reconciling them. Name close-out debt. Add cross-project dependencies and prioritized next moves.
+
+Publish the weekly report atomically through the kernel to `audits/global/<YYYY>-W<week>_audit.md`. A client-specific audit may be added later, but the default is the combined project view.
+
+## Chat receipts
+
+### Tag
+
+```text
+🏷 <Name> · <Project> · <VERDICT> · <Client>
+• What happened …
+• Assets …
+→ Route: summary | save | archive guidance
+📍 <record path>
+```
+
+### Save
+
+```text
+💾 Checkpoint · <Name> · <time> · <Client>
+• Now …  • Next …  • Watch …
+📍 <checkpoint path>
+```
+
+### Summary
+
+```text
+✅ Closed · <Name> · <Project> · <Client>
+• Achieved …  • Open / next …
+📁 human.md · agent.md
+```
+
+### Audit
+
+Print the five-fact GIST, bottom line, and global audit path.
+
+## Migration from v1
+
+Legacy records use `sessions/<Project>/<date>_<slug>/`. Schema v2 uses `sessions/<project>/<client>/<date>_<slug>/`.
+
+Migration is explicit:
+
+1. run `migrate-v1 --client claude --dry-run`;
+2. inspect every source and destination;
+3. run `--apply` only with approval;
+4. copy records into the Claude namespace;
+5. generate envelopes and a migration receipt;
+6. preserve every legacy source directory.
+
+Historical model identity remains null unless proven. Migration identifies the legacy client family, not a specific Claude model.
+
+## Safety invariants
+
+1. Archive, never delete.
+2. Capture before archive.
+3. One record per client session; never merge on title similarity.
+4. Client source is mandatory; model source is optional.
+5. `_INDEX.md` is derived and never a writing target for skills.
+6. User logs are outside installer ownership and uninstall scope.
+7. Unknown client identity fails closed.
+8. Paths remain inside the resolved home; symlink replacement is refused.
+9. Summaries use available context only and never imply transcript recovery.
+10. Unsupported rename/archive/history capabilities degrade to printed guidance.

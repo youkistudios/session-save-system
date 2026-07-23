@@ -4,7 +4,7 @@ title: "Session Save System"
 type: software
 authors:
   - name: "Youki Studios"
-version: 1.1.0
+version: 2.0.0-alpha.1
 date-released: 2026-07-23
 url: "https://github.com/youkistudios/session-save-system"
 repository-code: "https://github.com/youkistudios/session-save-system"

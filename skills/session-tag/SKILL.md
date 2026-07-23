@@ -1,20 +1,21 @@
 ---
 name: session-tag
-description: Session Save System triage gate. `/session-tag` (alias `/st`) — at session end, distill the session into a gist (one per arc), name it `<Project> Topic`, judge FINISHED/LIVE/STALE, and route to `/session-summary` or `/session-save`. Writes `tag.md` as the compute-once handoff the close-out reads. `/session-tag all` (or `/st all`) sweeps the whole chat list (review file first) to keep recents ≤5. Use when the user says "/session-tag", "/st", "session tag", "tag this session". NOT the close-out (that's /session-summary) and NOT a checkpoint (that's /session-save) — it DECIDES which to run. Rulebook: GUIDE.md in the save-system home folder.
+description: Name and classify the current AI work session, save its source-attributed handoff, and route it to checkpoint or close-out. Use when the user asks to tag, name, triage, or finish organizing the current session. This is the triage gate, not the close-out.
+license: MIT
+compatibility: Requires Python 3 and local filesystem write access. Installed adapters support Claude Code and Codex.
 ---
 
-# /st — session tag (triage gate)
+# Session tag — triage gate
 
-**Rulebook: `GUIDE.md` in the home folder — the single source of truth.** Home = the path in `~/.claude/save-system-home` if present, else `$SAVE_SYSTEM_HOME`, else `~/Desktop/session-logs/`. This skill is just the trigger; the guide owns the tag structure, arcs, verdicts, naming, projects, idempotency, sweep, and safety rules.
+Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the installed `client_id`. Read `GUIDE.md` in the shared Session Save home for the complete behavioral contract.
 
-## Default — tag THIS session
-1. **Project** (guide → "Projects"): match against `sessions/_PROJECTS.md`; if new, propose a name derived from repo/folder/deliverable/topic — never silently invent. On approval, register it.
-2. **Name = slug** (guide → "Naming"): `<Project> Topic`, purpose-beats-work-done; folder `sessions/<Project>/<DATE>_<slug>/` — find by id/slug and update in place, never fork. Unsure → 3 choices + "name it yourself".
-3. **Arcs** (guide → "Arcs"): default ONE; split only on work-target change AND (new assets OR new day).
-4. **Write `tag.md`** per the guide template — idempotent (`updated:` + `revisions:` on re-run). **`/st` owns the authoritative `_INDEX.md` row:** create it 🟢 open when absent, or upgrade the 🟡 provisional row created by an earlier `/ss`; update in place on re-runs.
-5. **Verdict + roll-up** (guide → "Verdict"): finished allows follow-ups; roll-up by routing precedence (live > all-stale > finished).
-6. **Route + apply the name** (on the user's OK): FINISHED → offer `/ssum` · LIVE → offer `/ss` · STALE → offer archive-stub. Set the chat title via session tools if available (confirm); else print it for manual setting.
-7. **Print the tidy `/st` block** (guide → "Chat output format"). Dot points, not prose.
+1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>` and use the returned home. Stop unless `ok` is true and `migration_required` is zero.
+2. Resolve the project from `sessions/_PROJECTS.md`; propose a new project on real ambiguity. Name the session `<Project> Topic`, purpose before work-done.
+3. Determine FINISHED, LIVE, or STALE using the guide. Default to one arc; split only when the work target changed and new assets or a day boundary exists.
+4. Run `begin --client <client_id> --project <project> --name <name> --slug <slug> --status open [--session-id <id>] [--model <model>]`. A stable host session ID is optional; never invent one. Reuse the returned record path.
+5. Write or refresh `<record>/tag.md` using the guide template. Preserve `record.json`. Updates are in place; never create another folder manually.
+6. Run `sync --client <client_id> --record <record> --status open --gist <concise-gist> --operation tag-written` to atomically refresh metadata and the global index.
+7. Route FINISHED → session-summary; LIVE → session-save; STALE → archive guidance. Rename/archive only if the current client exposes that capability and the user confirms.
+8. Print the compact tag receipt with the client label and real record path.
 
-## Sweep — `/st all`
-Per guide → "the sweep": list sessions → group by project → staleness rank → **write `_SWEEP-REVIEW.md` first (read-only proposal + approvals checklist)** → on approval, rename/archive one-by-one. Full verdicts only for logged sessions; un-logged get staleness/duplicate flags, stated honestly. Never delete. Capture-before-archive.
+For a sweep, produce `_SWEEP-REVIEW.md` first and wait for approval. Only sweep chat history the active client actually exposes. Never delete and never imply a cross-client chat sweep.

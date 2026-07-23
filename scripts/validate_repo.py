@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Dependency-free structural and safety validation."""
+"""Dependency-free structural, portability, and safety validation."""
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -10,11 +11,15 @@ ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "README.md", "GUIDE.md", "LICENSE", "SECURITY.md", "PROVENANCE.md",
     "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md", "CITATION.cff",
-    "NOTICE", "install.sh", "uninstall.sh", "tests/run.sh", "docs/index.html",
-    "docs/styles.css", "docs/PRODUCT-THESIS.md", "docs/ARCHITECTURE.md",
-    "docs/SAFETY-MODEL.md", "docs/ROADMAP.md", "provenance/COMPONENTS.json",
-    "automation/workflows/ci.yml", "automation/workflows/pages.yml",
+    "NOTICE", "install.sh", "uninstall.sh", "tests/run.sh",
+    "scripts/session_save.py", "docs/index.html", "docs/styles.css",
+    "docs/PRODUCT-THESIS.md", "docs/ARCHITECTURE.md", "docs/SAFETY-MODEL.md",
+    "docs/ROADMAP.md", "docs/decisions/0003-client-neutral-shared-home.md",
+    "adapters/claude/CLIENT.md", "adapters/codex/CLIENT.md",
+    "provenance/COMPONENTS.json", "automation/workflows/ci.yml",
+    "automation/workflows/pages.yml",
 ]
+SKILLS = ("session-tag", "session-save", "session-summary", "session-audit")
 
 
 def fail(message: str) -> None:
@@ -28,29 +33,69 @@ if missing:
 
 install = (ROOT / "install.sh").read_text()
 uninstall = (ROOT / "uninstall.sh").read_text()
-if "grep -q \"Session Save System\"" in install + uninstall or "grep -q \"session-\"" in install + uninstall:
+kernel = (ROOT / "scripts/session_save.py").read_text()
+
+if "grep -q \"Session Save System\"" in install + uninstall:
     fail("text-search ownership detection remains")
-for phrase in ("session-save-system.manifest", "hash_file", "backup_file"):
+for phrase in (
+    "session-save-system.manifest", "hash_file", "AGENTS_CONFIG_DIR",
+    "adapters/$client/CLIENT.md", "scripts/session_save.py",
+):
     if phrase not in install:
-        fail(f"installer safety mechanism missing: {phrase}")
-for phrase in ("is_allowed_path", "preserved modified file", "hash_file"):
+        fail(f"dual-client installer mechanism missing: {phrase}")
+for phrase in ("is_allowed_path", "preserved modified file", "hash_file", "AGENTS_CONFIG_DIR"):
     if phrase not in uninstall:
-        fail(f"uninstaller safety mechanism missing: {phrase}")
+        fail(f"dual-client uninstaller mechanism missing: {phrase}")
 if "rm -rf" in uninstall:
     fail("uninstaller must not recursively delete managed paths")
 
+for phrase in (
+    "fcntl.flock", "mutation_lock", "atomic_text", "safe_under", "record_id", "client_id",
+    "checkpoint-path", "rebuild_index", "migrate-v1", "source_records_preserved",
+    "write-audit",
+):
+    if phrase not in kernel:
+        fail(f"persistence mechanism missing: {phrase}")
+
+for skill_name in SKILLS:
+    path = ROOT / "skills" / skill_name / "SKILL.md"
+    if not path.is_file():
+        fail(f"missing skill: {path.relative_to(ROOT)}")
+    text = path.read_text()
+    if not text.startswith("---\n") or f"name: {skill_name}\n" not in text:
+        fail(f"invalid Agent Skills frontmatter: {skill_name}")
+    if "CLIENT.md" not in text or "scripts/session_save.py" not in text:
+        fail(f"skill is not adapter/kernel portable: {skill_name}")
+    if "~/.claude/save-system-home" in text:
+        fail(f"skill hardcodes Claude home: {skill_name}")
+    description = re.search(r"^description: (.+)$", text, re.MULTILINE)
+    if not description or len(description.group(1)) > 1024:
+        fail(f"invalid skill description: {skill_name}")
+
+claude = (ROOT / "adapters/claude/CLIENT.md").read_text()
+codex = (ROOT / "adapters/codex/CLIENT.md").read_text()
+if "`client_id`: `claude`" not in claude or "`client_id`: `codex`" not in codex:
+    fail("adapter identity is not explicit")
+
+for text in ((ROOT / "GUIDE.md").read_text(), (ROOT / "skills/session-save/SKILL.md").read_text()):
+    if "provisional" not in text.lower():
+        fail("first-checkpoint behavior is not aligned")
+
 guide = (ROOT / "GUIDE.md").read_text()
-save = (ROOT / "skills/session-save/SKILL.md").read_text()
-for text in (guide, save):
-    if "🟡 provisional row" not in text:
-        fail("first-checkpoint index behavior is not aligned")
+for phrase in ("One record per client session", "never edit directly", "Claude Code + Codex"):
+    if phrase not in guide:
+        fail(f"shared rulebook contract missing: {phrase}")
 
 html = (ROOT / "docs/index.html").read_text()
-for token in ('name="viewport"', 'href="styles.css"', 'id="main"'):
+for token in ('name="viewport"', 'href="styles.css"', 'id="main"', "CLAUDE CODE + CODEX"):
     if token not in html:
         fail(f"site missing {token}")
 
-for command in ([str(ROOT / "tests/run.sh")], [sys.executable, str(ROOT / "scripts/generate_manifest.py"), "--check"]):
+commands = (
+    [str(ROOT / "tests/run.sh")],
+    [sys.executable, str(ROOT / "scripts/generate_manifest.py"), "--check"],
+)
+for command in commands:
     result = subprocess.run(command, cwd=ROOT)
     if result.returncode:
         raise SystemExit(result.returncode)

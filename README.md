@@ -1,41 +1,58 @@
 # Session Save System
 
-![Session Save System — a local memory layer for working chats](docs/assets/session-save-header.svg)
+![Session Save System — one memory home for Claude Code and Codex](docs/assets/session-save-header.svg)
 
-**A local, human-triggered memory layer for Claude Code sessions.** Four
-commands turn a drifting chat into a named, indexed, resumable set of Markdown
-records you control.
+**One memory home. Two agent clients. Four deliberate moments.** Session Save turns work in Claude Code and Codex into source-attributed, indexed, resumable records you own.
 
-[Start with the usage guide](USAGE.md) ·
-[Read the safety model](docs/SAFETY-MODEL.md) ·
-[See the architecture](docs/ARCHITECTURE.md) ·
-[Open the site](https://youkistudios.github.io/session-save-system/)
+[Open the site](https://youkistudios.github.io/session-save-system/) · [Read the usage guide](USAGE.md) · [See the architecture](docs/ARCHITECTURE.md) · [Review the safety model](docs/SAFETY-MODEL.md)
 
-> Status: **v1.1, local instruction system.** Logging works anywhere Claude Code
-> can write files. Automatic chat rename/archive depends on host-provided session
-> tools and is not guaranteed.
+> **Status: v2.0 alpha, tested local kernel.** Installer, migration, namespace, concurrency, index, audit-input, and uninstall behavior are exercised in isolated tests. Live end-to-end skill invocation in both Claude Code and Codex remains a release witness—not a production claim.
 
 ## The problem
 
-Working chats accumulate context but lose identity: titles drift, decisions hide
-in transcripts, and a new session cannot tell finished work from a half-built
-thread. Search helps only when you remember what to search for.
+AI work now crosses clients, but memory remains trapped inside each chat list. Claude can research a project, Codex can implement it, and neither record naturally tells the same project story. Throwing both into one undifferentiated folder creates collisions and erases provenance.
 
-Session Save System creates a compact file model instead: one session, one
-folder, one index row, and explicit state transitions.
+Session Save keeps one local home while preserving both truths:
 
-## Four commands, one habit
+1. all records belong to the user’s projects;
+2. every record retains the client session that produced it.
 
-| Command | Alias | Outcome |
-|---|---|---|
-| `/session-tag` | `/st` | Name the session, capture its gist and assets, decide FINISHED / LIVE / STALE, then route onward |
-| `/session-save` | `/ss` | Append a small mid-session checkpoint; if used first, create one provisional index row |
-| `/session-summary` | `/ssum` | Write human and agent close-outs, then mark the existing row closed |
-| `/session-audit` | `/sa` | Read a week of summaries into a project-level report and prioritized next list |
+## The product model
 
-If you remember one command, use `/st` at the end of a working chat.
+| Moment | Claude Code | Codex | Outcome |
+|---|---|---|---|
+| **Tag** | `/session-tag` or `/st` | `$session-tag` / Skills | Name, project, gist, assets, honest verdict |
+| **Save** | `/session-save` or `/ss` | `$session-save` / Skills | Immutable in-flight checkpoint |
+| **Summarize** | `/session-summary` or `/ssum` | `$session-summary` / Skills | Human close-out and technical resume state |
+| **Audit** | `/session-audit` or `/sa` | `$session-audit` / Skills | One source-attributed project view across clients |
+
+The behavior is shared. Invocation syntax is a client adapter detail.
+
+## Shared file model
+
+```text
+session-logs/
+├── _INDEX.md                         generated global view
+├── GUIDE.md                          shared behavioral rulebook
+├── sessions/
+│   ├── _PROJECTS.md
+│   └── <project>/
+│       ├── claude/<date>_<slug>/
+│       │   ├── record.json
+│       │   ├── tag.md
+│       │   ├── checkpoints/<event>.md
+│       │   ├── human.md
+│       │   └── agent.md
+│       └── codex/<date>_<slug>/...
+├── events/<date>/<event>.json
+└── audits/global/<week>_audit.md
+```
+
+A client directory appears lazily on its first save. Project views aggregate Claude and Codex while the `client_id` remains present in every envelope, index row, and audit claim.
 
 ## Install
+
+Requirements: macOS or Linux, Python 3, Claude Code and/or Codex.
 
 ```bash
 git clone https://github.com/youkistudios/session-save-system
@@ -43,50 +60,59 @@ cd session-save-system
 ./install.sh
 ```
 
-To keep logs outside Desktop or iCloud, choose a location before installing:
+The default installs both adapters:
+
+- Claude Code → `~/.claude/skills/` plus local slash-command aliases;
+- Codex → `~/.agents/skills/`;
+- shared config → `~/.config/session-save/config.json`;
+- records → `~/Desktop/session-logs/` unless configured otherwise.
+
+Choose another home before first install:
 
 ```bash
-SAVE_SYSTEM_HOME="$HOME/Documents/session-logs" ./install.sh
+SESSION_SAVE_HOME="$HOME/Documents/session-logs" ./install.sh
 ```
 
-The installer records exact SHA-256 identities for files it manages. It skips
-unrelated collisions, backs up managed files before replacement, and gives the
-uninstaller enough evidence to remove only byte-identical owned files.
+Install only one adapter when needed:
 
-## File model
-
-```text
-session-logs/
-├── _INDEX.md                         one row per session
-├── GUIDE.md                          operational rulebook
-├── sessions/
-│   ├── _PROJECTS.md                  user-approved registry
-│   └── <Project>/<date>_<slug>/
-│       ├── tag.md                    identity, gist, assets, verdict
-│       ├── checkpoints.md            append-only working state
-│       ├── human.md                  readable close-out
-│       └── agent.md                  technical resume state
-└── audits/<year>-W<week>_audit.md    weekly synthesis
+```bash
+SESSION_SAVE_CLIENTS=claude ./install.sh
+SESSION_SAVE_CLIENTS=codex ./install.sh
 ```
 
-`/st` normally creates the index row as open. If `/ss` comes first, it may
-create one clearly marked provisional row; `/st` upgrades that same row in
-place. `/ssum` closes an existing row and never creates a duplicate.
+GUI clients may require permission to write the chosen directory. Unsupported rename/archive controls degrade to a printed manual instruction; saving does not depend on them.
 
-## Safety contract
+## Existing v1 records
 
-- **Archive, never delete.** Session-management actions remain reversible.
-- **Capture before archive.** Knowledge is saved before a chat leaves recents.
-- **One identity, one record.** Session id, then slug, resolves updates in place.
-- **Propose before sweep.** `/st all` writes a review and waits for approval.
-- **Prove before uninstall.** Only manifest-listed files whose current hashes
-  still match are removed; modified and unknown files are preserved.
-- **Logs are user data.** Install, uninstall, and repository validation never
-  remove the log home or backup directory.
+The installer never silently moves them. It reports a required copy-first migration:
 
-See [SAFETY-MODEL.md](docs/SAFETY-MODEL.md) for boundaries and recovery.
+```bash
+python3 scripts/session_save.py --home "$HOME/Desktop/session-logs" \
+  migrate-v1 --client claude --dry-run
 
-## Validate locally
+# Inspect every source and destination, then explicitly apply:
+python3 scripts/session_save.py --home "$HOME/Desktop/session-logs" \
+  migrate-v1 --client claude --apply
+```
+
+Migration copies legacy records under the Claude namespace, generates identity envelopes and a receipt, and preserves every original directory.
+
+## Why there is a small kernel
+
+An instruction-only system can write Markdown, but two open desktop clients must not race while editing one index. The dependency-free Python kernel owns only persistence mechanics:
+
+- safe client/project paths;
+- globally unique record and event IDs;
+- client namespaces;
+- immutable checkpoint allocation;
+- serialized and atomic metadata writes;
+- rebuildable global index;
+- source-attributed audit input;
+- copy-first migration.
+
+Models still author the summaries. The four-moment product stays small.
+
+## Verify
 
 ```bash
 ./tests/run.sh
@@ -94,20 +120,27 @@ python3 scripts/generate_manifest.py
 python3 scripts/validate_repo.py
 ```
 
-The isolated tests use temporary homes; they do not touch your Claude config or
-session logs. Workflow definitions are staged under `automation/workflows/` and
-remain inactive until a maintainer deliberately moves them into
-`.github/workflows/`.
+The 20-test suite currently covers dual-client installation, ownership collisions, recoverable updates, isolated namespaces, immutable checkpoints, 24 simultaneous writes, copy-first migration, global audits, proof-based uninstall, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
 
-## Privacy and limits
+## Safety contract
 
-Records stay as local Markdown; the system contains no network client,
-telemetry, database, or account. Your chosen folder may still be synchronized
-by the operating system or another service. The skills summarize available
-session context; they cannot recover context that the host no longer exposes,
-guarantee a model’s summary is correct, or rename chats where session tools are
-absent.
+- **One home, namespaced writers.** Claude and Codex never share a source record directory.
+- **Project first, provenance always.** Global views aggregate without erasing the client.
+- **Derived index.** `_INDEX.md` can be rebuilt from source envelopes.
+- **No silent merging.** Similar titles are not identity proof.
+- **Archive, never delete. Capture before archive.**
+- **Prove before uninstall.** Only hash-matching managed adapter files are removed.
+- **Records are user data.** Shared config, logs, migrations, and backups are outside uninstall scope.
+
+## Honest limits
+
+- This does not synchronize raw transcripts or recover context a client does not expose.
+- Model-authored summaries can be incomplete or wrong.
+- Stable session IDs, chat renaming, history listing, and archive controls vary by client.
+- Claude Desktop/Cowork is not claimed by the Claude Code adapter.
+- Windows support and non-Claude/Codex adapters are not yet claimed.
+- A local directory may still be synchronized by iCloud or another service.
 
 ## License
 
-MIT © 2026 Youki Studios. See [LICENSE](LICENSE).
+MIT © 2026 Youki Studios. See [LICENSE](LICENSE), [PROVENANCE.md](PROVENANCE.md), and [SECURITY.md](SECURITY.md).

@@ -1,15 +1,17 @@
 # Provenance
 
-Session Save System was developed by Youki Studios as a local Markdown workflow
-for naming, checkpointing, closing, and auditing Claude Code sessions. The
-skills, commands, guide, shell installer, and public documentation are original
-to this repository.
+Session Save System was developed by Youki Studios as a local Markdown workflow for naming, checkpointing, closing, and auditing AI-assisted sessions. Its four-moment behavior, rulebook, persistence design, installer, safety tests, artwork, and public documentation are original to this repository.
 
-Portfolio work in 2026 added exact hash-manifest ownership, isolated safety
-tests, original SVG artwork, a GitHub Pages site, governance documents,
-repository validation, and staged workflows. AI assistance was used to draft
-and review parts of this packaging under human direction. No third-party code
-or runtime dependency is bundled.
+Version 2 refactors the original Claude-oriented instruction suite around the open Agent Skills format and adds original Claude Code and Codex adapters plus a dependency-free Python persistence kernel. The kernel design—client namespaces, immutable operation events, atomic derived views, source-attributed audit input, and copy-first migration—was newly authored for this project with disclosed AI assistance under human direction.
 
-See [`provenance/COMPONENTS.json`](provenance/COMPONENTS.json) for component
-classifications. The existing MIT license remains unchanged.
+No third-party source code or runtime package is bundled. Python’s standard library and operating-system file locking are used at runtime.
+
+## External specifications consulted
+
+- Agent Skills open specification: <https://agentskills.io/specification>
+- Claude Code skills documentation: <https://code.claude.com/docs/en/skills>
+- OpenAI Codex skills documentation: <https://developers.openai.com/codex/skills/>
+
+These sources informed compatible packaging locations and invocation boundaries. They are not copied implementation code and do not imply endorsement.
+
+See [`provenance/COMPONENTS.json`](provenance/COMPONENTS.json) for component classifications. The MIT license remains unchanged.

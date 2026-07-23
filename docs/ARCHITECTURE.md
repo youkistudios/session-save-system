@@ -1,57 +1,102 @@
 # Architecture
 
-Session Save System is a file-first instruction suite with two separate data
-zones: managed Claude configuration and user-owned session records.
+Session Save v2 separates portable behavior, client adaptation, deterministic persistence, and user-owned records.
 
 ```text
-Claude session
-   │
-   ├─ /st ───► tag.md ─────────────┐
-   ├─ /ss ───► checkpoints.md      ├──► _INDEX.md
-   ├─ /ssum ─► human.md + agent.md ┘
-   └─ /sa ─── reads summaries ─────────► audits/<week>.md
-
-installer ─► skills + commands + pointer + ownership manifest
-log home  ─► GUIDE + index + session records (user data)
+Claude Code adapter          Codex adapter
+~/.claude/skills/            ~/.agents/skills/
+          │                         │
+          └──── same four Agent Skills ────┐
+                                           ▼
+                             Python persistence kernel
+                         identity · events · atomic views
+                                           │
+                                           ▼
+                                  one shared local home
+                       projects / claude + codex / audits
 ```
 
-## Control plane
+## Portable behavior
 
-`GUIDE.md` is the single behavioral rulebook. The four skills are thin triggers
-and the eight command files are entry points. Full command names are canonical;
-aliases have identical behavior.
+Four open-format Agent Skills define Tag, Save, Summarize, and Audit. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` plus the same local kernel. The guide owns product behavior; adapters own invocation and optional host capabilities.
 
-## Identity and state
+Claude Code receives slash-command entry points and aliases. Codex discovers the skills from `~/.agents/skills/` and invokes them through skill mention or selection.
 
-Session identity resolves by host session id when available and slug otherwise.
-The same identity binds folder, chat title, and index row. State moves through:
+## Record plane
 
 ```text
-no row ── /st ──► open ── /ssum ──► closed
-   └───── /ss ──► provisional ── /st ──► open
+sessions/<project>/<client>/<date>_<slug>/
+├── record.json
+├── tag.md
+├── checkpoints/<timestamp>_<event-id>.md
+├── human.md
+└── agent.md
 ```
 
-`/ssum` never invents a record. This keeps closing behavior dependent on an
-existing, inspectable identity.
+`record.json` contains the stable machine envelope: schema and record IDs, client, optional model and host-session ID, project, slug, status, timestamps, gist, continuation reference, and witnessed capability flags.
+
+Markdown contains the human and agent narrative. Skills never edit the envelope directly.
+
+## Identity
+
+1. A real `client_id + provider_session_id` is preferred.
+2. `client_id + session_slug` is the fallback.
+3. Ambiguity requires the user.
+4. Two clients never share one record directory.
+5. Similar names never trigger cross-client merging.
+6. `model_id` is optional metadata and never a path key.
+
+## State
+
+```text
+no record ── tag ──► open ── summary ──► closed
+     └────── save ─► provisional ── tag ─► open
+open ─────── save ─► open
+```
+
+Summary locates an existing record and cannot create one. A first checkpoint creates one provisional record without inventing a verdict.
+
+## Concurrency
+
+Multiple clients cannot safely mutate one Markdown index directly. The kernel therefore:
+
+- serializes mutations with a local file lock;
+- writes metadata and views through flush + atomic rename;
+- allocates globally unique event and checkpoint names;
+- isolates every source record by client and verifies client ownership on mutation;
+- emits immutable JSON operation receipts;
+- rebuilds `_INDEX.md` from validated envelopes.
+
+A stale or interrupted derived view can be rebuilt. Source records remain the authority.
+
+## Global audit
+
+`audit-sources` returns record envelopes and available tag/human/agent paths across all clients. The skill groups them by project and attributes every factual bullet to its client and source path. Contradictions remain visible. `write-audit` atomically publishes the combined weekly report.
+
+## Home resolution
+
+1. explicit `--home`;
+2. `SESSION_SAVE_HOME` or legacy `SAVE_SYSTEM_HOME`;
+3. `~/.config/session-save/config.json`;
+4. legacy Claude pointer during migration;
+5. `~/Desktop/session-logs/`.
+
+The shared config is never an uninstall target.
 
 ## Installation boundary
 
-Managed files live below the Claude configuration directory. The installer
-records `SHA-256<TAB>relative-path` for every installed file. An unrelated
-collision with no manifest identity is skipped. A previously managed file is
-backed up before replacement. The uninstaller accepts only an internal allowlist
-of paths and deletes only a regular file whose current hash matches the
-manifest.
+Claude and Codex have separate SHA-256 ownership manifests and backup trees. Unrelated collisions are skipped. Managed replacements are backed up. Uninstall considers only allowlisted regular files whose current hash matches the manifest.
 
-The chosen log home is not part of that manifest and is never an uninstall
-target.
+The shared home, config, legacy sources, migration receipts, and backups are user data and remain untouched.
+
+## Migration
+
+V1 records are inventoried before mutation. Records containing symlinks are refused. Apply copies each safe legacy directory into private staging, writes its envelope there, atomically places it under `sessions/<project>/claude/`, rebuilds the view, and emits a receipt. Every source directory remains in place.
 
 ## Degraded modes
 
-- Without session-management tools, naming and logging work but title changes
-  and archive operations become manual.
-- Without a host session id, slug is the fallback identity and ambiguity must be
-  resolved with the user.
-- If a managed install file is edited locally, uninstall preserves it.
-- Weekly audits depend on completed tags and summaries; missing close-outs are
-  surfaced as debt rather than reconstructed from transcripts.
+- Missing stable session ID → client + slug fallback.
+- Missing rename/archive tools → print manual guidance.
+- Missing historical chat access → disable sweep outside visible chats.
+- Missing context or filesystem permission → abort rather than fabricate a save.
+- Legacy records awaiting migration → doctor reports not ready and skills stop.
