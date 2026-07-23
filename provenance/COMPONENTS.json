@@ -1,11 +1,29 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "components": [
     {
-      "path": "skills/ and commands/",
-      "kind": "original-instruction-system",
+      "path": "skills/, commands/, and GUIDE.md",
+      "kind": "original-portable-instruction-system",
       "origin": "Youki Studios",
       "license": "MIT"
+    },
+    {
+      "path": "adapters/claude/ and adapters/codex/",
+      "kind": "original-client-adapter-metadata",
+      "origin": "Youki Studios with disclosed AI assistance",
+      "license": "MIT",
+      "references": [
+        "https://code.claude.com/docs/en/skills",
+        "https://developers.openai.com/codex/skills/",
+        "https://agentskills.io/specification"
+      ]
+    },
+    {
+      "path": "scripts/session_save.py",
+      "kind": "original-local-persistence-kernel",
+      "origin": "Youki Studios with disclosed AI assistance",
+      "license": "MIT",
+      "dependencies": "Python standard library only"
     },
     {
       "path": "install.sh, uninstall.sh, and tests/",

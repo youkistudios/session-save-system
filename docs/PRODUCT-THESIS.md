@@ -2,38 +2,47 @@
 
 ## Claim
 
-The durable unit of AI-assisted work should be a small, user-owned record—not a
-transcript trapped behind a vague chat title. Session Save System turns a manual
-save habit into a consistent local memory layer.
+The durable unit of AI-assisted work should belong to the user—not to the model, vendor, or chat application that happened to produce it.
+
+Session Save is a client-neutral local memory layer. Claude Code and Codex invoke the same four moments while writing source-attributed records into one user-owned home.
 
 ## User and job
 
-The primary user works across several long or branching Claude Code sessions.
-They need to stop, resume, archive, and review work without reconstructing state
-from raw transcripts or trusting an opaque memory service.
+The primary user works across long or branching sessions and may move one project between Claude Code and Codex. They need to stop, resume, close, and review work without reconstructing state from transcripts or losing which client produced a decision.
 
 ## Product model
 
-The system separates four moments:
+1. **Tag:** establish client, project, name, gist, assets, and honest state.
+2. **Save:** preserve in-flight state as an immutable client-owned checkpoint.
+3. **Summarize:** close the source record for human reading and agent resumption.
+4. **Audit:** synthesize recent records across clients, grouped by project.
 
-1. **Tag:** establish identity, gist, assets, and honest state.
-2. **Save:** preserve in-flight working state.
-3. **Summarize:** close the record for both human reading and agent resumption.
-4. **Audit:** synthesize recent records across projects.
+The four moments share one rulebook and one record contract. Client adapters own invocation differences; the kernel owns persistence. `_INDEX.md` is a rebuildable view, not a second source of truth.
 
-These moments share one rulebook and one file identity. The index is a routing
-surface, not a second source of truth.
+## Why client-neutral, not merely model-neutral
+
+Cursor can run several models; Claude and Codex can appear in several interfaces. The storage boundary therefore distinguishes `client_id` from optional `model_id`. Implemented clients are `claude` (Claude Code) and `codex`. Model identity never selects a directory and is recorded only when reliable.
 
 ## Value
 
-The product reduces restart cost, forgotten decisions, and noisy recent-session
-lists while keeping records inspectable and portable. Manual invocation is a
-feature: the user knows when a checkpoint happened and retains authority over
-renaming and archive decisions.
+- one project memory surface across supported clients;
+- provenance retained on every record and audit statement;
+- no account, database, daemon, telemetry, or hosted lock-in;
+- ordinary Markdown/JSON records that remain readable without the product;
+- safe simultaneous saves through isolated namespaces and atomic derived views;
+- a future adapter boundary that does not require a schema fork.
+
+## Product laws
+
+1. One home, namespaced writers.
+2. Project first in human views; client always present in provenance.
+3. No silent cross-client merging.
+4. Source records are primary; global views are derived.
+5. Manual invocation remains a feature.
+6. Capture before archive; archive never delete.
+7. Unsupported client capabilities degrade honestly.
+8. Cross-client support must not add a fifth user ritual.
 
 ## Proof standard
 
-The repository can prove installer ownership behavior, file-model consistency,
-and isolated uninstall safety. It cannot prove that every host exposes complete
-session context or management tools, nor that generated summaries are always
-correct. Those limits are explicit.
+The repository proves dual-adapter installation, schema separation, serialized atomic writes, index rebuilding, migration behavior, and uninstall safety through isolated tests. It does not yet prove complete live skill behavior in every Claude Code and Codex version or guarantee model-authored summary quality.

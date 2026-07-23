@@ -1,17 +1,19 @@
 ---
 name: session-save
-description: Session Save System mid-session checkpoint. `/session-save` (alias `/ss`) — drop a quick timestamped "here's where I'm at" into the session's log so nothing's lost if the chat ends. Use when the user says "/session-save", "/ss", "save a checkpoint". NOT the end-of-session close-out (that's /session-summary). Rulebook: GUIDE.md in the save-system home folder.
+description: Save a source-attributed mid-session checkpoint into the shared local Session Save home. Use when the user asks to save, checkpoint, preserve current state, or pause unfinished work. Not an end-of-session close-out.
+license: MIT
+compatibility: Requires Python 3 and local filesystem write access. Installed adapters support Claude Code and Codex.
 ---
 
-# /ss — checkpoint
+# Session save — checkpoint
 
-**Rulebook: `GUIDE.md` in the home folder** (home = `~/.claude/save-system-home` path if present, else `$SAVE_SYSTEM_HOME`, else `~/Desktop/session-logs/`). This skill is just the trigger.
+Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the installed `client_id`. Read the shared home’s `GUIDE.md`.
 
-- Session folder: `sessions/<Project>/<DATE>_<slug>/` — reuse the session's existing folder (guide → "Idempotency"); if none exists yet, derive project + slug per the guide (ask on real ambiguity, never invent folders elsewhere).
-- Append `### <HH:MM> — **Now** … / **Working on** … / **Next** … / **Watch** …` (~200–400 words) to `<folder>/checkpoints.md` (create with simple frontmatter on first write). Re-runs append another timestamped block to the SAME file — never a new file.
-- Ensure exactly one index row for this session. If `/st` already ran, update
-  its 🟢 open row. If `/ss` is the first command, create one 🟡 provisional row
-  using gist `Checkpoint saved; run /st to tag this session.`; `/st` later
-  upgrades that same row in place. Never invent a verdict or duplicate the row.
-- Do NOT write the close-out reports here — that's `/ssum`.
-- **Print the tidy `/ss` block** (guide → "Chat output format"): 💾 Checkpoint · Name · time / Now · Next · Watch / 📍 path.
+1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>`. Stop unless `ok` is true and `migration_required` is zero.
+2. Locate the current record with `locate --client <client_id> --session-id <id>` when a real stable host ID exists, otherwise `locate --client <client_id> --slug <known-slug>`.
+3. If no record exists, resolve project and name as the guide requires, then run `begin --client <client_id> --project <project> --name <name> --status provisional --gist "Checkpoint saved; run session-tag to tag this session."`. Never invent a verdict. This is the single provisional record.
+4. Run `checkpoint-path --client <client_id> --record <record>` and write one Markdown checkpoint to the returned unique path. Use `### <HH:MM> — <client_id>` followed by **Now**, **Working on**, **Next**, and **Watch**. Keep it approximately 100–300 words.
+5. Run `sync --client <client_id> --record <record> --operation checkpoint-written`. Do not change an existing open record back to provisional.
+6. Print the compact checkpoint receipt with the client label and real path.
+
+Checkpoints are immutable event files. Never append to another client’s file, create a second record for the same client session, write a close-out here, or edit `_INDEX.md` directly.

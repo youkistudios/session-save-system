@@ -1,16 +1,20 @@
 ---
 name: session-summary
-description: Session Save System end-of-session close-out. `/session-summary` (alias `/ssum`) — write the readable summary (human.md) + technical resume-state (agent.md) and mark the session closed, so any future chat can catch up cold. Use when the user says "/session-summary", "/ssum", "close out the session". NOT a mid-session checkpoint (that's /session-save). Rulebook: GUIDE.md in the save-system home folder.
+description: Close an existing source-attributed Session Save record with a human summary and technical resume state. Use when the user asks to summarize, close out, or preserve a finished session. Not a mid-session checkpoint.
+license: MIT
+compatibility: Requires Python 3 and local filesystem write access. Installed adapters support Claude Code and Codex.
 ---
 
-# /ssum — close-out
+# Session summary — close-out
 
-**Rulebook: `GUIDE.md` in the home folder** (home = `~/.claude/save-system-home` path if present, else `$SAVE_SYSTEM_HOME`, else `~/Desktop/session-logs/`). This skill is just the trigger.
+Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the installed `client_id`. Read the shared home’s `GUIDE.md`.
 
-1. Folder: `sessions/<Project>/<DATE>_<slug>/` — reuse the session's existing folder (guide → "Idempotency").
-2. Write `human.md` (~500w readable: `## GIST` — **promoted verbatim from `tag.md` if `/st` ran, never recomputed** — + bottom line · `## Assets` · Problems · Solutions · Achieved · Actioned · Insights · Next) + `agent.md` (~500w technical only: state, decisions + why, proven vs unproven, open threads). No gist overlap between the two.
-3. **Idempotent:** if they already exist, refresh in place; bump `updated:` + append to `revisions:` — never a second file or folder.
-4. **Index — one row per session:** update the session's existing `_INDEX.md` row in place (status → ✅ closed, refresh gist); only prepend a new row if none exists. Never duplicate.
-5. **Print the tidy `/ssum` block** (guide → "Chat output format"): ✅ Closed · Achieved · Open/next · 📁 paths · 🔖 updated.
+1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>`. Stop unless `ok` is true and `migration_required` is zero.
+2. Locate the existing record by real host session ID or known slug with `locate --client <client_id> ...`. If no record exists, stop and ask the user to run session-tag first. A close-out never invents a record.
+3. Require `<record>/tag.md`. Promote its GIST content without recomputing it.
+4. Write or refresh `<record>/human.md`: GIST, bottom line, assets, problems, solutions, achieved, actioned, insights, and next.
+5. Write or refresh `<record>/agent.md`: technical state, decisions and reasons, proven versus unproven, source client, and open threads. Reconcile later checkpoints against the tag explicitly.
+6. Run `sync --client <client_id> --record <record> --status closed --operation summary-written` to update the source envelope and rebuild the global index atomically.
+7. Print the compact close-out receipt with the client label and both real paths.
 
-Rules: honest state, not a highlight reel. Real paths only. Concise beats complete. Guide wins on any conflict.
+Refresh the same two files on rerun. Never close another client’s record, merge records because names look similar, create a duplicate index row, or edit `_INDEX.md` directly.

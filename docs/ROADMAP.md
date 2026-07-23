@@ -1,25 +1,25 @@
 # Roadmap
 
-## Now — v1.0 safety baseline
+## Now — v2.0 alpha
 
-- Maintain hash-manifest ownership, recoverable replacement, and proof-based
-  uninstall behavior.
-- Keep the four-command file model consistent and dependency-free.
-- Exercise installer and uninstaller behavior in isolated temporary homes.
+- Preserve the four-moment behavior across Claude Code and Codex adapters.
+- Maintain one shared home with client-separated source records.
+- Prove atomic concurrent writes, rebuildable indexes, global audits, safe migration, and proof-based uninstall.
+- Keep live-host evidence distinct from isolated kernel evidence.
 
-## Next — field evidence
+## Next — release witnesses
 
-- Add synthetic fixtures for idempotent index updates and close-out transitions.
-- Test on a second POSIX environment and document portability results.
-- Gather unrelated-user onboarding evidence and improve the first-run path.
+- Run clean end-to-end Tag, Save, Summarize, and Audit journeys in current Claude Code and Codex clients.
+- Publish a versioned capability matrix for session IDs, rename, archive, and history visibility.
+- Test installer/kernel behavior on a second POSIX environment.
+- Add golden content fixtures without turning narrative quality into a false deterministic claim.
 
-## Later — only with demonstrated need
+## Later — only with evidence
 
-- Explore host adapters for session identity and title management.
-- Consider export/import conventions between local session-log vaults.
+- Evaluate Windows locking, paths, and installation.
+- Consider another client adapter only when it can pass the existing conformance suite without a schema fork.
+- Explore explicit cross-client continuation links while preserving separate source records.
 
 ## Not planned
 
-Background transcript capture, destructive chat cleanup, hosted accounts,
-telemetry, automatic publishing, and a proprietary log format are outside the
-product thesis.
+Background transcript collection, automatic cross-client title merging, destructive chat cleanup, hosted accounts, telemetry, automatic publishing, model rankings, and a proprietary record format remain outside the thesis.

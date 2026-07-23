@@ -1,18 +1,21 @@
 ---
 name: session-audit
-description: Session Save System weekly audit. `/session-audit` (alias `/sa`) — read the week's session logs (grouped by project) and produce one bird's-eye report: what was achieved, plans created but never actioned, high-value assets, cross-project dependencies, and prioritized next steps. Use when the user says "/session-audit", "/sa", "week audit", "sum up the week", "where are we across everything". Rulebook: GUIDE.md in the save-system home folder.
+description: Audit source-attributed Session Save records across Claude Code and Codex, grouped by project, into one local weekly report. Use when the user asks what happened this week, what remains open, or what to do next.
+license: MIT
+compatibility: Requires Python 3 and local filesystem write access. Installed adapters support Claude Code and Codex.
 ---
 
-# /session-audit (/sa) — weekly bird's-eye
+# Session audit — cross-client bird’s-eye
 
-**Rulebook: `GUIDE.md` in the home folder** (home = `~/.claude/save-system-home` path if present, else `$SAVE_SYSTEM_HOME`, else `~/Desktop/session-logs/`). Reads the logs the other skills produce; changes nothing but the audit file.
+Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the active client identity. Read the shared home’s `GUIDE.md`.
 
-1. **Window:** last 7 days by default (or the range the user names). `mkdir -p` `audits/`.
-2. **Gather cheap:** each in-window `sessions/<Project>/<date>_<slug>/` — read `tag.md` (gist · assets · verdict) + `human.md` GIST/Next if present. Use `_INDEX.md` for statuses. **Summaries, never raw transcripts.** For large weeks, spawn reader sub-agents per project and synthesize their digests.
-3. **Group by project** (from `_PROJECTS.md`): per project collect **Achieved** (finished arcs) · **Open plans not actioned** · **High-value assets** (from the assets ledgers) · **Live threads / pending decisions**.
-4. **Cross-wires:** surface dependencies between projects (tag.md cross-links feed this).
-5. **Prioritize:** rank next actions — time-sensitive and decision-gating items first; each names the session + the specific move.
-6. **Write** `audits/<YYYY>-W<ISO week>_audit.md`: `## GIST` (5 facts + bottom line) · `## By project` · `## Cross-wires` · `## Do next (prioritized)`. One audit per window — a re-run updates it (idempotency).
-7. **Tell the user:** the path + the GIST, in tidy dot points.
+1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>`. Stop unless `ok` is true and `migration_required` is zero.
+2. Run `audit-sources --days 7` or the requested window. This returns source-attributed records from every installed client.
+3. Read only each returned `record.json`, `tag.md`, and `human.md` when present. Never read raw transcripts. For every claim retain the source client and record path.
+4. Group by project first. Within each project report **Achieved**, **Open plans not actioned**, **High-value assets**, and **Live threads / pending decisions**. Surface cross-project dependencies and contradictions between client records rather than silently reconciling them.
+5. Name close-out debt: finished/open records missing `human.md` are not banked knowledge.
+6. Write a complete audit draft to a temporary regular file. Include a five-fact GIST, bottom line, by-project sections, cross-wires, and prioritized next actions. Prefix factual bullets with `[Claude]`, `[Codex]`, or the returned client ID and link the source record.
+7. Run `write-audit --week <YYYY-Www> --input <draft>` to publish atomically into `audits/global/`. Remove the temporary draft.
+8. Print the audit GIST and real output path.
 
-Rules: read-only over the logs. A project with no activity gets one line. An audit that says "all good" every week is theatre — honest state always.
+An audit is read-only over source records. It may replace the same weekly global report atomically, but it never edits session records or erases provenance.

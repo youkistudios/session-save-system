@@ -1,82 +1,81 @@
-# Using the Session Save System
+# Using Session Save
 
-> GUIDE.md is the rulebook the AI follows. **This file is for you** — when to use which command, with real scenarios.
+One shared habit works in Claude Code and Codex. The behavior is identical; invocation differs.
+
+| Moment | Claude Code | Codex |
+|---|---|---|
+| Tag | `/session-tag` or `/st` | mention `$session-tag` or choose it through `/skills` |
+| Save | `/session-save` or `/ss` | `$session-save` / Skills |
+| Summarize | `/session-summary` or `/ssum` | `$session-summary` / Skills |
+| Audit | `/session-audit` or `/sa` | `$session-audit` / Skills |
 
 ## The 10-second version
 
-```
-While working ──────────► /session-save   (/ss)    "checkpoint me"
-Finishing a chat ───────► /session-tag    (/st)    "name it, judge it, tell me what's next"
-        └─ it says FINISHED ─► /session-summary (/ssum)  "close it out properly"
-        └─ it says LIVE ─────► /session-save     (/ss)   "checkpoint, keep it in recents"
-Chat list is a mess ────► /session-tag all (/st all)     "sweep everything"
-Sunday / end of week ───► /session-audit  (/sa)          "what did I actually do this week?"
+```text
+While working ───────► Save       preserve Now / Next / Watch
+Wrapping a session ──► Tag        name it, judge it, route it
+Finished ────────────► Summarize  bank human + technical state
+End of week ─────────► Audit      combine Claude + Codex by project
 ```
 
-**If you only remember one command, make it `/session-tag`.** It figures out what state your session is in and tells you what to run next.
+If you remember one moment, use **Tag** when finishing a meaningful chat.
 
----
+## Tag — the router
 
-## `/session-tag` (`/st`) — the one you run at the end of every chat
+Tag names the session for what it exists to produce, records its client and assets, judges FINISHED/LIVE/STALE, and routes to Save or Summarize. If the client exposes rename/archive controls, it asks before using them. Otherwise it prints a manual action.
 
-**What it does:** reads your session, names it for what it *actually did* (not what the auto-title says), judges whether the work is FINISHED / LIVE (still going) / STALE (dead), saves a bullet-point summary + a list of what the session produced, renames the chat, and points you to the right next command.
+A sweep is always client-local. Claude cannot claim to see Codex’s chat list or vice versa. The combined view comes from saved records, not hidden transcript access.
 
-**Use it when:**
-- You're wrapping up a chat — even mid-task.
-- A chat wandered ("started as CSS help, became a full redesign") and the title no longer matches.
-- You're about to close your laptop and want the session findable next week.
+## Save — the checkpoint
 
-**Real scenario:** You spent 2 hours on a landing page. `/st` renames the chat `Website Hero-Section`, logs that you built the hero + fixed the nav, judges it LIVE (mobile layout unfinished), and suggests `/ss` so it stays in your recents.
+Save writes a short **Now / Working on / Next / Watch** checkpoint. Checkpoints are immutable files, so simultaneous Claude and Codex saves do not append to the same document.
 
-### `/session-tag all` (`/st all`) — the sweep
-**Use it when** your chat list has 15+ conversations and you can't find anything. It reviews every session, writes a proposal file (suggested names, keep/archive verdicts), and **waits for your approval** before touching anything. Archives are always reversible.
+If Save runs before Tag, it creates one provisional record in the active client namespace. It does not guess a verdict.
 
----
+## Summarize — the close-out
 
-## `/session-save` (`/ss`) — the checkpoint
+Summarize requires an existing tagged record. It writes:
 
-**What it does:** appends a timestamped "Now / Working on / Next / Watch" block to the session's log. 30 seconds, no ceremony.
+- `human.md` for readable recall;
+- `agent.md` for technical resumption.
 
-**Use it when:**
-- Mid-way through a long session, so a crash/compaction loses nothing.
-- Stepping away — future-you (or a future chat) can pick up exactly where you stopped.
-- `/st` judged the session LIVE.
+It then marks that client record closed. It never creates a missing record or silently closes a similarly named session from another client.
 
-**Not for:** closing a finished session — that's `/session-summary`.
+## Audit — the shared project view
 
-**Real scenario:** Deep in a debugging session, dinner's ready. `/ss` logs "Now: narrowed the bug to the auth middleware. Next: test the token refresh path." Tomorrow's chat reads that one block and continues.
+Audit reads saved tags and summaries from every client namespace, groups them by project, and writes one report. Every factual bullet retains a client label and source record.
 
----
+```markdown
+## Harness Axis
 
-## `/session-summary` (`/ssum`) — the close-out
+### Achieved
+- [Claude] Foundation boundaries ratified. ([record](...))
+- [Codex] Adversarial fixtures implemented. ([record](...))
+```
 
-**What it does:** writes two files — `human.md` (a readable summary: what you achieved, decided, learned, and what's next) and `agent.md` (technical state so a future AI session can resume cold) — then marks the session ✅ closed in your index.
+Contradictions are surfaced rather than merged. Missing close-outs are named as debt.
 
-**Use it when:**
-- `/st` judged the session FINISHED.
-- You're done with a piece of work and want it *properly* remembered before archiving the chat.
+## Where records live
 
-**Not for:** sessions with real work still in flight (checkpoint those instead).
+The shared home comes from `~/.config/session-save/config.json` unless an explicit test or environment override is used. Default:
 
-**Real scenario:** The hero section shipped. `/ssum` writes the summary, closes the session, and next month when you wonder "how did I set up those animations?", the answer is one file away — no scrolling through a dead chat.
+```text
+~/Desktop/session-logs/
+```
 
----
+Within each project:
 
-## `/session-audit` (`/sa`) — the weekly bird's-eye
+```text
+sessions/<project>/claude/...
+sessions/<project>/codex/...
+```
 
-**What it does:** reads *all* your session logs for the week, groups them by project, and writes one report: what you achieved, plans you created but never actioned, the valuable things you built, how projects depend on each other, and a prioritized "do next" list.
+`_INDEX.md` is generated across both. You can open every record without Session Save.
 
-**Use it when:**
-- End of the week — "what actually happened?"
-- You feel scattered across projects and want one picture.
-- Monday planning — the "do next" list is your starting point.
+## Existing v1 users
 
-**Real scenario:** Sunday night, `/sa` shows: Website (shipped hero, mobile still open), Job Search (two applications, one interview to prep), Side Project (untouched for 9 days — decide or archive it). One glance, one plan.
+Run the migration dry run before invoking the v2 skills. The installer prints the exact command. Apply copies records into the Claude namespace and preserves all originals.
 
----
+## Honest boundary
 
-## How they fit together
-
-`/session-tag` is the **router** — it decides. `/session-save` and `/session-summary` are the two **destinations** — quick checkpoint vs. full close-out. `/session-audit` is the **reader** — it turns a week of logs into one picture. Everything lands in `~/Desktop/session-logs/`, plain markdown you own, one folder per session, one index to catch up from.
-
-**The habit that makes it work:** end every real working chat with `/st`. That's it — the system handles the rest.
+Session Save can preserve only the context visible to the current client. It does not recover hidden history, guarantee summary correctness, or synchronize transcripts. Its durable promise is the local record it actually writes.
