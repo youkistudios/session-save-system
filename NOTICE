@@ -4,5 +4,9 @@ Copyright (c) 2026 Youki Studios
 This distribution includes original instruction files, shell utilities,
 documentation, SVG artwork, and validation tooling under the MIT License.
 
+The public site self-hosts IBM Plex Sans Condensed from the IBM Plex project
+under the SIL Open Font License 1.1. The full font license is included at
+docs/assets/fonts/license.txt.
+
 The names Claude and Claude Code are trademarks of their respective owner.
 Their mention describes compatibility and does not imply endorsement.

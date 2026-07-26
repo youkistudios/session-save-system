@@ -2,7 +2,7 @@
 
 ![Session Save System — one memory home for Claude Code and Codex](docs/assets/session-save-header.svg)
 
-**One memory home. Two agent clients. Four deliberate moments.** Session Save turns work in Claude Code and Codex into source-attributed, indexed, resumable records you own.
+**One memory home. Two agent clients. Four deliberate moments.** Session Save is a local session-memory architecture that turns captured context, decisions, progress, artifact references, and next state into source-attributed records you own.
 
 [Open the site](https://youkistudios.github.io/session-save-system/) · [Read the usage guide](USAGE.md) · [See the architecture](docs/ARCHITECTURE.md) · [Review the safety model](docs/SAFETY-MODEL.md)
 
@@ -10,7 +10,7 @@
 
 ## The problem
 
-AI work now crosses clients, but memory remains trapped inside each chat list. Claude can research a project, Codex can implement it, and neither record naturally tells the same project story. Throwing both into one undifferentiated folder creates collisions and erases provenance.
+AI work now crosses clients, but session memory remains trapped inside each chat list. Claude can research a project, Codex can implement it, and neither record naturally tells the same project story. Throwing both into one undifferentiated folder creates collisions and erases provenance.
 
 Session Save keeps one local home while preserving both truths:
 

@@ -4,7 +4,7 @@
 
 ## Product boundary
 
-Session Save is client-neutral local memory, not transcript synchronization. Each supported client captures only context it can currently access. All records live in one user-approved home, remain ordinary Markdown/JSON, and retain the client that authored them.
+Session Save is a client-neutral local session-memory architecture, not transcript synchronization. Each supported client deliberately captures only context it can currently access: decisions, progress, open questions, resumption state, and references to relevant artifacts. It does not silently copy every external artifact. All records live in one user-approved home, remain ordinary Markdown/JSON, and retain the client that authored them.
 
 The implemented support contract is Claude Code + Codex local clients. Other clients are not claimed.
 

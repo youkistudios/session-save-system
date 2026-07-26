@@ -20,6 +20,17 @@ Claude Code adapter          Codex adapter
                        projects / claude + codex / audits
 ```
 
+## Memory architecture
+
+Session Save is a local session-memory architecture, not a transcript warehouse. Its memory has four layers:
+
+1. **Captured context:** Tag, immutable Checkpoints, and Close summaries preserve decisions, progress, open questions, and resumption state.
+2. **Artifact references:** records name relevant documents, code, and outputs with their real paths and value. Session Save does not silently copy every referenced artifact into its home.
+3. **Identity envelopes:** JSON binds each memory record to an approved project and the client session that produced it.
+4. **Rebuildable projections:** the global index and Review organize source records without becoming a second authority.
+
+Capture remains deliberate and user-invoked. Memory is useful without Session Save because its canonical material remains ordinary Markdown and JSON.
+
 ## Portable behavior
 
 Four open-format canonical Agent Skills implement Tag, Save, Summary, and Audit. Additive Checkpoint, Close, and Review wrappers expose clearer lifecycle language without changing those implementations. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.

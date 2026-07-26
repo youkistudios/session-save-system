@@ -32,10 +32,17 @@
       "license": "MIT"
     },
     {
-      "path": "docs/ and assets/",
+      "path": "docs/ excluding docs/assets/fonts/",
       "kind": "original-presentation-and-documentation",
       "origin": "Youki Studios with disclosed AI assistance",
       "license": "MIT"
+    },
+    {
+      "path": "docs/assets/fonts/",
+      "kind": "self-hosted-display-font",
+      "origin": "IBM Plex project",
+      "license": "SIL Open Font License 1.1",
+      "source": "https://github.com/IBM/plex/tree/master/packages/plex-sans-condensed/fonts/complete/woff2"
     }
   ]
 }
