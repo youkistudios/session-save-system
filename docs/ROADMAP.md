@@ -7,10 +7,12 @@
 - Prove atomic concurrent writes, rebuildable indexes, global audits, safe migration, and proof-based uninstall.
 - Keep live-host evidence distinct from isolated kernel evidence.
 - Require exact approved project identity in normal capture flows; report unregistered historical labels without semantic merging.
+- Deliver read-only Session Pickup with exact record selection, bounded descriptor reads, disclosure-bound content tokens, cited restart briefs, and no persistence.
+- Make install/uninstall crash-recoverable through one global lock and cross-surface transaction journal.
 
 ## Next — release witnesses
 
-- Run clean end-to-end Tag, Checkpoint, Close, and Review journeys in current Claude Code and Codex clients.
+- Complete clean end-to-end Tag, Checkpoint, Close, Review, and Pickup journeys in current Claude Code and Codex clients, including Claude → Codex and Codex → Claude Pickup.
 - Publish a versioned capability matrix for session IDs, rename, archive, and history visibility.
 - Test installer/kernel behavior on a second POSIX environment.
 - Add golden content fixtures without turning narrative quality into a false deterministic claim.
@@ -19,7 +21,7 @@
 
 - Evaluate Windows locking, paths, and installation.
 - Consider another client adapter only when it can pass the existing conformance suite without a schema fork.
-- Explore explicit cross-client continuation links while preserving separate source records.
+- Explore explicit cross-client continuation links only after read-only Pickup is stable, while preserving separate source records and never inferring lineage retroactively.
 - Consider exact user-approved workspace-to-project mappings only if repeated prompts prove burdensome.
 
 ## Not planned

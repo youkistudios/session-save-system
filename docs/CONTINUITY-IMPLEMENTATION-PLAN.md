@@ -1,6 +1,6 @@
 # Continuity-first implementation plan
 
-Status: approved execution boundary, 2026-07-26.
+Status: superseded in part by [ADR 0006](decisions/0006-read-only-session-pickup.md), 2026-07-26. SS1 shipped. The experimental SS2 thread/profile branch remains unmerged because its live witness did not pass. Read-only Pickup is intentionally allowed before continuation lineage because access to exact saved evidence does not require inventing ancestry, profiles, or workspace identity.
 
 ## Product target
 
@@ -31,17 +31,21 @@ Freeze repository commit, tests, installed copies, 32-record digest inventory, a
 
 Replace eight installed kernel implementations with eight tiny launchers pointing to one manifest-owned canonical kernel. Change no schema or user behavior.
 
-### SS2 — Minimal continuity contract
+### SS2 — Read-only Pickup (shipped as alpha.5)
 
-Add stable thread/workspace identity, explicit continuation links, and Business/Developer capture-policy presets. Prefer an additive 2.x envelope unless a breaking schema is proven necessary.
+Add deterministic project/session selection, bounded cited handoff, disclosure and consent, and scoped action confirmation without schema changes or continuation lineage.
 
-### SS3 — Claude↔Codex witness
+### SS2L — Deferred lineage/profile experiment
+
+Stable thread/workspace identity, explicit continuation links, and Business/Developer capture-policy presets remain experimental and unmerged. Reconsider them only after real two-direction Pickup witnesses show that read-only access is insufficient. Existing records never acquire lineage retroactively.
+
+### SS3 — Claude↔Codex Pickup witness
 
 Prove checkpoint → bounded handoff → acceptance → separately attributed continuation → combined chronology.
 
-### SS4 — Deterministic recall
+### SS4 — Deterministic recall only if needed
 
-Add the smallest local search and bounded continuation compiler that meets frozen-corpus relevance and latency tests. No MCP initially.
+Pickup already provides exact deterministic recall. Add search or another continuation compiler only if witnessed use proves exact project/session selection insufficient. No semantic matching or MCP by default.
 
 ### SS5 — Optional assistance
 

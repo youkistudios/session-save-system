@@ -45,11 +45,15 @@ fi
 HOME="$case_fresh/home" python3 "$case_fresh/agents/skills/session-save/scripts/session_save.py" --home "$case_fresh/logs" doctor --client codex > "$case_fresh/launcher-doctor.json"
 assert_contains "$case_fresh/launcher-doctor.json" '"client": "codex"'
 assert_file "$case_fresh/claude/commands/st.md"
+assert_file "$case_fresh/claude/commands/session-pickup.md"
+assert_file "$case_fresh/claude/skills/session-pickup/SKILL.md"
+assert_file "$case_fresh/agents/skills/session-pickup/SKILL.md"
+assert_file "$case_fresh/agents/skills/session-pickup/scripts/session_save.py"
 assert_absent "$case_fresh/agents/commands/st.md"
 assert_contains "$case_fresh/claude/skills/session-tag/CLIENT.md" '`client_id`: `claude`'
 assert_contains "$case_fresh/agents/skills/session-tag/CLIENT.md" '`client_id`: `codex`'
-[ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 33 ] || { echo "FAIL Claude manifest count"; exit 1; }
-[ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 21 ] || { echo "FAIL Codex manifest count"; exit 1; }
+[ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 37 ] || { echo "FAIL Claude manifest count"; exit 1; }
+[ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 24 ] || { echo "FAIL Codex manifest count"; exit 1; }
 ok "fresh install creates one shared kernel and exact thin Claude/Codex adapters"
 
 assert_file "$case_fresh/config/config.json"
@@ -76,6 +80,8 @@ HOME="$case_collision/home" CLAUDE_CONFIG_DIR="$case_collision/claude" AGENTS_CO
   SESSION_SAVE_CONFIG="$case_collision/config/config.json" SESSION_SAVE_HOME="$case_collision/logs" \
   "$ROOT/install.sh" >/dev/null
 assert_contains "$case_collision/agents/skills/session-tag/SKILL.md" "unrelated skill"
+assert_absent "$case_collision/agents/skills/session-tag/CLIENT.md"
+assert_absent "$case_collision/agents/skills/session-tag/scripts/session_save.py"
 if awk -F '\t' '$2 == "skills/session-tag/SKILL.md" { found=1 } END { exit found ? 0 : 1 }' "$case_collision/agents/session-save-system.manifest"; then
   echo "FAIL unrelated Codex collision was claimed"; exit 1
 fi
@@ -118,7 +124,7 @@ printf '%s\n' 'local managed edit' > "$case_backup/agents/skills/session-save/CL
 HOME="$case_backup/home" CLAUDE_CONFIG_DIR="$case_backup/claude" AGENTS_CONFIG_DIR="$case_backup/agents" \
   SESSION_SAVE_CONFIG="$case_backup/config/config.json" SESSION_SAVE_HOME="$case_backup/logs" \
   "$ROOT/install.sh" >/dev/null
-backup=$(find "$case_backup/agents/session-save-system-backups" -path '*/skills/session-save/CLIENT.md' -type f | head -1)
+backup=$(find "$case_backup/home/.local/state/session-save/backups" -path '*/codex/skills/session-save/CLIENT.md' -type f | head -1)
 assert_file "$backup"
 assert_contains "$backup" "local managed edit"
 assert_contains "$case_backup/agents/skills/session-save/CLIENT.md" '`client_id`: `codex`'
@@ -299,6 +305,7 @@ case_migrate=$TEST_ROOT/migrate
 legacy=$case_migrate/logs/sessions/Legacy-Project/2026-07-01_legacy-work
 mkdir -p "$legacy"
 printf '%s\n' '---' 'session_slug: legacy-work' 'project: Legacy Project' 'name: "Legacy Project Work"' 'status: closed' '---' '# Legacy Project Work — session tag' > "$legacy/tag.md"
+printf '%s\n' '# Legacy checkpoint' > "$legacy/checkpoints.md"
 printf '%s\n' '# Human summary' > "$legacy/human.md"
 dry=$(python3 "$KERNEL" --home "$case_migrate/logs" migrate-v1 --client claude --dry-run)
 [ "$(printf '%s' "$dry" | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')" = 1 ] || { echo "FAIL migration dry run"; exit 1; }
@@ -328,7 +335,8 @@ case_migration_help=$TEST_ROOT/migration-help
 mkdir -p "$case_migration_help/home" "$case_migration_help/claude" "$case_migration_help/agents" "$case_migration_help/config" "$case_migration_help/logs/sessions/Old/2026-07-01_old"
 printf '%s\n' '# Old' > "$case_migration_help/logs/sessions/Old/2026-07-01_old/tag.md"
 (cd /tmp && HOME="$case_migration_help/home" CLAUDE_CONFIG_DIR="$case_migration_help/claude" AGENTS_CONFIG_DIR="$case_migration_help/agents" SESSION_SAVE_CONFIG="$case_migration_help/config/config.json" SESSION_SAVE_HOME="$case_migration_help/logs" "$ROOT/install.sh") > "$case_migration_help/output.txt"
-assert_contains "$case_migration_help/output.txt" "python3 \"$case_migration_help/home/.local/share/session-save/session_save.py\""
+migration_kernel=$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve())' "$case_migration_help/home/.local/share/session-save/session_save.py")
+assert_contains "$case_migration_help/output.txt" "python3 \"$migration_kernel\""
 ok "migration instructions use an absolute runnable kernel path"
 
 case_audit=$TEST_ROOT/audit
@@ -436,6 +444,209 @@ if python3 "$KERNEL" --home "$case_kernel_link/logs" begin --client codex --proj
 fi
 [ "$(find "$case_kernel_link/outside" -type f | wc -l | tr -d ' ')" = 0 ] || { echo "FAIL kernel wrote outside home"; exit 1; }
 ok "kernel refuses existing symlinks below the shared home"
+
+case_pickup=$TEST_ROOT/pickup
+mkdir -p "$case_pickup"
+python3 "$KERNEL" --home "$case_pickup/logs" project-register --project "Pickup Witness" --description "Bounded restart witness" >/dev/null
+python3 "$KERNEL" --home "$case_pickup/logs" begin --client claude --project "Pickup Witness" --name "Pickup Witness Website Plan" --slug website-plan --status open --gist "Plan the homepage" --require-registered-project > "$case_pickup/one.json"
+python3 "$KERNEL" --home "$case_pickup/logs" begin --client codex --project "Pickup Witness" --name "Pickup Witness Other Session" --slug other-session --status closed --gist "Unselected work" --require-registered-project > "$case_pickup/two.json"
+one_path=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$case_pickup/one.json")
+two_path=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["path"])' "$case_pickup/two.json")
+one_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["record"]["record_id"])' "$case_pickup/one.json")
+two_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["record"]["record_id"])' "$case_pickup/two.json")
+printf '%s\n' '# Website plan' '' 'Build `/tmp/pickup-external-secret.txt` after confirmation.' > "$one_path/tag.md"
+mkdir -p "$one_path/checkpoints"
+printf '%s\n' '# Checkpoint' '' 'Stopped before choosing the hero layout.' > "$one_path/checkpoints/20260726-120000-000000_a1b2c3d4.md"
+printf '%s\n' 'UNSELECTED-CANARY-9472' > "$two_path/tag.md"
+printf '%s\n' 'EXTERNAL-CANARY-5831' > /tmp/pickup-external-secret.txt
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources > "$case_pickup/projects.json"
+assert_contains "$case_pickup/projects.json" '"mode": "projects"'
+assert_contains "$case_pickup/projects.json" '"name": "Pickup Witness"'
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" > "$case_pickup/candidates.json"
+assert_contains "$case_pickup/candidates.json" "$one_id"
+assert_contains "$case_pickup/candidates.json" "$two_id"
+if grep -F 'Plan the homepage' "$case_pickup/candidates.json" >/dev/null || grep -F 'Bounded restart witness' "$case_pickup/projects.json" >/dev/null || grep -F 'Pickup Witness Website Plan' "$case_pickup/candidates.json" >/dev/null; then echo "FAIL free-form saved metadata leaked before consent"; exit 1; fi
+ok "Pickup lists only approved projects and exact source-attributed candidates"
+
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "pickup witness" --record-id "$one_id" > "$case_pickup/selection.json"
+assert_contains "$case_pickup/selection.json" '"mode": "selection"'
+assert_contains "$case_pickup/selection.json" "$one_path/tag.md"
+if grep -F 'Build `/tmp' "$case_pickup/selection.json" >/dev/null; then echo "FAIL content leaked before consent mode"; exit 1; fi
+selection_token=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["selection_token"])' "$case_pickup/selection.json")
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --include-content --selection-token "$selection_token" > "$case_pickup/content.json"
+assert_contains "$case_pickup/content.json" '"mode": "content"'
+assert_contains "$case_pickup/content.json" 'Stopped before choosing the hero layout.'
+if grep -F 'UNSELECTED-CANARY-9472' "$case_pickup/content.json" >/dev/null || grep -F 'EXTERNAL-CANARY-5831' "$case_pickup/content.json" >/dev/null; then echo "FAIL Pickup crossed selected-content boundary"; exit 1; fi
+cp "$one_path/tag.md" "$case_pickup/tag.saved"
+printf '%s\n' 'changed after disclosure' >> "$one_path/tag.md"
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --include-content --selection-token "$selection_token" >/dev/null 2>&1; then echo "FAIL stale selection token accepted changed content"; exit 1; fi
+cp "$case_pickup/tag.saved" "$one_path/tag.md"
+ok "Pickup separates metadata disclosure from bounded selected narrative content"
+
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --record-id "$two_id" > "$case_pickup/project-view-selection.json"
+project_view_token=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["selection_token"])' "$case_pickup/project-view-selection.json")
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --record-id "$two_id" --include-content --selection-token "$project_view_token" > "$case_pickup/project-view.json"
+assert_contains "$case_pickup/project-view.json" "$one_id"
+assert_contains "$case_pickup/project-view.json" "$two_id"
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --limit 9 >/dev/null 2>&1; then echo "FAIL candidate limit above eight accepted"; exit 1; fi
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup-Witness" >/dev/null 2>&1; then echo "FAIL punctuation lookalike project accepted"; exit 1; fi
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --record-id "$one_id" >/dev/null 2>&1; then echo "FAIL duplicate record IDs accepted"; exit 1; fi
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --include-content >/dev/null 2>&1; then echo "FAIL content mode accepted without exact record ID"; exit 1; fi
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --include-content >/dev/null 2>&1; then echo "FAIL content mode accepted without selection token"; exit 1; fi
+if python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --include-content --selection-token "not-the-disclosed-token" >/dev/null 2>&1; then echo "FAIL altered selection token accepted"; exit 1; fi
+ok "Pickup project view remains exact, bounded, and non-semantic"
+
+python3 - "$case_pickup/logs" > "$case_pickup/before.json" <<'PY'
+import hashlib,json,os,pathlib,stat,sys
+root=pathlib.Path(sys.argv[1]); rows=[]
+for p in sorted(root.rglob('*')):
+ s=p.lstat(); rel=str(p.relative_to(root)); row=[rel,stat.S_IFMT(s.st_mode),stat.S_IMODE(s.st_mode),s.st_size,s.st_mtime_ns]
+ if p.is_file() and not p.is_symlink(): row.append(hashlib.sha256(p.read_bytes()).hexdigest())
+ rows.append(row)
+print(json.dumps(rows,separators=(',',':')))
+PY
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$one_id" --include-content --selection-token "$selection_token" >/dev/null
+python3 - "$case_pickup/logs" > "$case_pickup/after.json" <<'PY'
+import hashlib,json,os,pathlib,stat,sys
+root=pathlib.Path(sys.argv[1]); rows=[]
+for p in sorted(root.rglob('*')):
+ s=p.lstat(); rel=str(p.relative_to(root)); row=[rel,stat.S_IFMT(s.st_mode),stat.S_IMODE(s.st_mode),s.st_size,s.st_mtime_ns]
+ if p.is_file() and not p.is_symlink(): row.append(hashlib.sha256(p.read_bytes()).hexdigest())
+ rows.append(row)
+print(json.dumps(rows,separators=(',',':')))
+PY
+cmp -s "$case_pickup/before.json" "$case_pickup/after.json" || { echo "FAIL Pickup mutated shared home"; exit 1; }
+ok "Pickup metadata and content reads leave a full-tree inventory unchanged"
+
+bad_dir="$case_pickup/logs/sessions/pickup-witness/claude/2026-07-26_bad-time"
+mkdir -p "$bad_dir"
+python3 - "$bad_dir/record.json" <<'PY'
+import json,pathlib,sys
+pathlib.Path(sys.argv[1]).write_text(json.dumps({"schema_version":"2.0","record_id":"0"*32,"client_id":"claude","project":"Pickup Witness","session_slug":"bad-time","name":"Bad Time","status":"open","created_at":"2999-01-01T00:00:00+00:00","updated_at":"2999-01-01T00:00:00+00:00"}))
+PY
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" > "$case_pickup/corrupt.json"
+assert_contains "$case_pickup/corrupt.json" '"corrupt_record_count": 1'
+assert_contains "$case_pickup/corrupt.json" '"code": "invalid-record"'
+if grep -F 'bad-time' "$case_pickup/corrupt.json" >/dev/null || grep -F '"record_id": "00000000000000000000000000000000"' "$case_pickup/corrupt.json" >/dev/null; then echo "FAIL corrupt record details entered pre-consent output"; exit 1; fi
+ok "Pickup excludes corrupt envelopes and reports them separately"
+
+python3 "$KERNEL" --home "$case_migrate/logs" project-register --project "Legacy Project" --description "Approved migrated fixture" >/dev/null
+legacy_record_json="$case_migrate/logs/sessions/legacy-project/claude/2026-07-01_legacy-work/record.json"
+legacy_id=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["record_id"])' "$legacy_record_json")
+python3 "$KERNEL" --home "$case_migrate/logs" pickup-sources --project "Legacy Project" --record-id "$legacy_id" > "$case_pickup/legacy-selection.json"
+assert_contains "$case_pickup/legacy-selection.json" 'checkpoints.md'
+assert_contains "$case_pickup/legacy-selection.json" '"legacy": true'
+legacy_token=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["selection_token"])' "$case_pickup/legacy-selection.json")
+python3 "$KERNEL" --home "$case_migrate/logs" pickup-sources --project "Legacy Project" --record-id "$legacy_id" --include-content --selection-token "$legacy_token" > "$case_pickup/legacy-content.json"
+assert_contains "$case_pickup/legacy-content.json" '# Legacy checkpoint'
+printf '%s\n' '# False legacy checkpoint' > "$two_path/checkpoints.md"
+python3 "$KERNEL" --home "$case_pickup/logs" pickup-sources --project "Pickup Witness" --record-id "$two_id" > "$case_pickup/false-legacy.json"
+if grep -F 'checkpoints.md' "$case_pickup/false-legacy.json" >/dev/null; then echo "FAIL unmarked legacy checkpoint accepted"; exit 1; fi
+ok "Pickup supports marked migrated checkpoints without inferring false legacy files"
+
+case_pickup_link=$TEST_ROOT/pickup-link
+cp -R "$case_pickup/logs" "$case_pickup_link"
+linked_record=$(find "$case_pickup_link/sessions" -path '*/claude/*website-plan' -type d | head -1)
+rm "$linked_record/tag.md"
+ln -s /tmp/pickup-external-secret.txt "$linked_record/tag.md"
+if python3 "$KERNEL" --home "$case_pickup_link" pickup-sources --project "Pickup Witness" --record-id "$one_id" >/dev/null 2>&1; then echo "FAIL Pickup accepted symlinked narrative"; exit 1; fi
+case_pickup_large=$TEST_ROOT/pickup-large
+cp -R "$case_pickup/logs" "$case_pickup_large"
+large_record=$(find "$case_pickup_large/sessions" -path '*/claude/*website-plan' -type d | head -1)
+dd if=/dev/zero of="$large_record/tag.md" bs=1024 count=65 2>/dev/null
+if python3 "$KERNEL" --home "$case_pickup_large" pickup-sources --project "Pickup Witness" --record-id "$one_id" >/dev/null 2>&1; then echo "FAIL Pickup accepted oversized narrative"; exit 1; fi
+ln -s "$case_pickup/logs" "$case_pickup/home-link"
+if python3 "$KERNEL" --home "$case_pickup/home-link" pickup-sources >/dev/null 2>&1; then echo "FAIL Pickup accepted symlinked home root"; exit 1; fi
+ok "Pickup fails closed on symlinked roots, symlinked narratives, and oversized files"
+
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Read these selected saved notes now?"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "current AI provider"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "exact narrative file"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Do not open any returned path yourself"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "grill me"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Continuing does not require immediate capture"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" "one cumulative budget"
+assert_contains "$ROOT/commands/session-pickup.md" "session-pickup"
+ok "Pickup skill statically specifies disclosure, citations, cumulative question limits, and action confirmation"
+
+case_pickup_collision=$TEST_ROOT/pickup-collision
+mkdir -p "$case_pickup_collision/home" "$case_pickup_collision/claude" "$case_pickup_collision/agents/skills/session-pickup" "$case_pickup_collision/config"
+printf '%s\n' 'unrelated Pickup client' > "$case_pickup_collision/agents/skills/session-pickup/CLIENT.md"
+HOME="$case_pickup_collision/home" CLAUDE_CONFIG_DIR="$case_pickup_collision/claude" AGENTS_CONFIG_DIR="$case_pickup_collision/agents" SESSION_SAVE_CONFIG="$case_pickup_collision/config/config.json" SESSION_SAVE_HOME="$case_pickup_collision/logs" "$ROOT/install.sh" >/dev/null
+assert_contains "$case_pickup_collision/agents/skills/session-pickup/CLIENT.md" 'unrelated Pickup client'
+assert_absent "$case_pickup_collision/agents/skills/session-pickup/SKILL.md"
+assert_absent "$case_pickup_collision/agents/skills/session-pickup/scripts/session_save.py"
+case_pickup_command=$TEST_ROOT/pickup-command
+mkdir -p "$case_pickup_command/home" "$case_pickup_command/claude/commands" "$case_pickup_command/agents" "$case_pickup_command/config"
+printf '%s\n' 'unrelated pickup command' > "$case_pickup_command/claude/commands/session-pickup.md"
+HOME="$case_pickup_command/home" CLAUDE_CONFIG_DIR="$case_pickup_command/claude" AGENTS_CONFIG_DIR="$case_pickup_command/agents" SESSION_SAVE_CONFIG="$case_pickup_command/config/config.json" SESSION_SAVE_HOME="$case_pickup_command/logs" "$ROOT/install.sh" >/dev/null
+assert_contains "$case_pickup_command/claude/commands/session-pickup.md" 'unrelated pickup command'
+assert_file "$case_pickup_command/claude/skills/session-pickup/SKILL.md"
+ok "Pickup installation is unit-atomic while an unrelated Claude command remains unclaimed"
+
+case_single=$TEST_ROOT/single-client
+mkdir -p "$case_single/home" "$case_single/claude" "$case_single/agents" "$case_single/config"
+HOME="$case_single/home" CLAUDE_CONFIG_DIR="$case_single/claude" AGENTS_CONFIG_DIR="$case_single/agents" SESSION_SAVE_CONFIG="$case_single/config/config.json" SESSION_SAVE_HOME="$case_single/logs" SESSION_SAVE_CLIENTS=claude "$ROOT/install.sh" > "$case_single/output.txt"
+assert_file "$case_single/claude/skills/session-pickup/SKILL.md"
+assert_absent "$case_single/agents/session-save-system.manifest"
+[ "$(wc -l < "$case_single/claude/session-save-system.manifest" | tr -d ' ')" = 37 ] || { echo "FAIL single-client Claude manifest count"; exit 1; }
+assert_contains "$case_single/output.txt" "Done. Installed claude uses:"
+if grep -F 'Codex:' "$case_single/output.txt" >/dev/null; then echo "FAIL Claude-only install advertised Codex"; exit 1; fi
+case_single_codex=$TEST_ROOT/single-client-codex
+mkdir -p "$case_single_codex/home" "$case_single_codex/claude" "$case_single_codex/agents" "$case_single_codex/config"
+HOME="$case_single_codex/home" CLAUDE_CONFIG_DIR="$case_single_codex/claude" AGENTS_CONFIG_DIR="$case_single_codex/agents" SESSION_SAVE_CONFIG="$case_single_codex/config/config.json" SESSION_SAVE_HOME="$case_single_codex/logs" SESSION_SAVE_CLIENTS=codex "$ROOT/install.sh" > "$case_single_codex/output.txt"
+assert_file "$case_single_codex/agents/skills/session-pickup/SKILL.md"
+assert_absent "$case_single_codex/claude/session-save-system.manifest"
+[ "$(wc -l < "$case_single_codex/agents/session-save-system.manifest" | tr -d ' ')" = 24 ] || { echo "FAIL single-client Codex manifest count"; exit 1; }
+assert_contains "$case_single_codex/output.txt" "Done. Installed codex uses:"
+if grep -F 'Claude Code:' "$case_single_codex/output.txt" >/dev/null; then echo "FAIL Codex-only install advertised Claude"; exit 1; fi
+ok "Pickup supports clean Claude-only and Codex-only installations"
+
+case_tx_fail=$TEST_ROOT/tx-fail
+mkdir -p "$case_tx_fail/home" "$case_tx_fail/claude" "$case_tx_fail/agents" "$case_tx_fail/config"
+if HOME="$case_tx_fail/home" CLAUDE_CONFIG_DIR="$case_tx_fail/claude" AGENTS_CONFIG_DIR="$case_tx_fail/agents" SESSION_SAVE_CONFIG="$case_tx_fail/config/config.json" SESSION_SAVE_HOME="$case_tx_fail/logs" SESSION_SAVE_TEST_FAIL_AFTER=5 "$ROOT/install.sh" >/dev/null 2>&1; then echo "FAIL injected installer failure succeeded"; exit 1; fi
+assert_absent "$case_tx_fail/home/.local/share/session-save/session_save.py"
+assert_absent "$case_tx_fail/claude/session-save-system.manifest"
+assert_absent "$case_tx_fail/home/.local/state/session-save/upgrade-in-progress"
+assert_absent "$case_tx_fail/home/.local/state/session-save/install-transactions/current.json"
+ok "global installer transaction rolls back an injected cross-surface failure"
+
+case_tx_crash=$TEST_ROOT/tx-crash
+mkdir -p "$case_tx_crash/home" "$case_tx_crash/claude" "$case_tx_crash/agents" "$case_tx_crash/config"
+if HOME="$case_tx_crash/home" CLAUDE_CONFIG_DIR="$case_tx_crash/claude" AGENTS_CONFIG_DIR="$case_tx_crash/agents" SESSION_SAVE_CONFIG="$case_tx_crash/config/config.json" SESSION_SAVE_HOME="$case_tx_crash/logs" SESSION_SAVE_TEST_CRASH_DURING=5 "$ROOT/install.sh" >/dev/null 2>&1; then echo "FAIL injected hard crash succeeded"; exit 1; fi
+assert_file "$case_tx_crash/home/.local/state/session-save/upgrade-in-progress"
+assert_file "$case_tx_crash/home/.local/state/session-save/install-transactions/current.json"
+HOME="$case_tx_crash/home" CLAUDE_CONFIG_DIR="$case_tx_crash/claude" AGENTS_CONFIG_DIR="$case_tx_crash/agents" SESSION_SAVE_CONFIG="$case_tx_crash/config/config.json" SESSION_SAVE_HOME="$case_tx_crash/logs" "$ROOT/install.sh" >/dev/null
+assert_absent "$case_tx_crash/home/.local/state/session-save/upgrade-in-progress"
+assert_absent "$case_tx_crash/home/.local/state/session-save/install-transactions/current.json"
+assert_file "$case_tx_crash/claude/skills/session-pickup/SKILL.md"
+ok "next-run recovery repairs a simulated SIGKILL transaction before reinstalling"
+
+case_tx_temp=$TEST_ROOT/tx-temp-crash
+mkdir -p "$case_tx_temp/home" "$case_tx_temp/claude" "$case_tx_temp/agents" "$case_tx_temp/config"
+if HOME="$case_tx_temp/home" CLAUDE_CONFIG_DIR="$case_tx_temp/claude" AGENTS_CONFIG_DIR="$case_tx_temp/agents" SESSION_SAVE_CONFIG="$case_tx_temp/config/config.json" SESSION_SAVE_HOME="$case_tx_temp/logs" SESSION_SAVE_TEST_CRASH_TEMP_PATH=session_save.py "$ROOT/install.sh" >/dev/null 2>&1; then echo "FAIL temporary-file hard crash succeeded"; exit 1; fi
+find "$case_tx_temp/home/.local/share/session-save" -name '.session-save-txn-*' | grep . >/dev/null || { echo "FAIL expected transaction temporary absent after injected crash"; exit 1; }
+HOME="$case_tx_temp/home" CLAUDE_CONFIG_DIR="$case_tx_temp/claude" AGENTS_CONFIG_DIR="$case_tx_temp/agents" SESSION_SAVE_CONFIG="$case_tx_temp/config/config.json" SESSION_SAVE_HOME="$case_tx_temp/logs" "$ROOT/install.sh" >/dev/null
+if find "$case_tx_temp" -name '.session-save-txn-*' | grep . >/dev/null; then echo "FAIL recovery left transaction temporary"; exit 1; fi
+assert_file "$case_tx_temp/claude/skills/session-pickup/SKILL.md"
+ok "recovery removes a journaled temporary left before replacement"
+
+case_lock=$TEST_ROOT/install-lock
+mkdir -p "$case_lock/home" "$case_lock/claude" "$case_lock/agents" "$case_lock/config"
+HOME="$case_lock/home" CLAUDE_CONFIG_DIR="$case_lock/claude" AGENTS_CONFIG_DIR="$case_lock/agents" SESSION_SAVE_CONFIG="$case_lock/config/config.json" SESSION_SAVE_HOME="$case_lock/logs" SESSION_SAVE_TEST_HOLD_LOCK=2 "$ROOT/install.sh" >/dev/null & lock_pid=$!
+sleep 0.3
+if HOME="$case_lock/home" CLAUDE_CONFIG_DIR="$case_lock/claude" AGENTS_CONFIG_DIR="$case_lock/agents" SESSION_SAVE_CONFIG="$case_lock/config/config.json" SESSION_SAVE_HOME="$case_lock/logs" "$ROOT/uninstall.sh" >/dev/null 2>&1; then echo "FAIL concurrent uninstall acquired global lock"; kill "$lock_pid" 2>/dev/null || true; exit 1; fi
+wait "$lock_pid"
+assert_file "$case_lock/claude/session-save-system.manifest"
+ok "one secure retained lock serializes install, uninstall, and recovery"
+
+case_bad_journal=$TEST_ROOT/bad-journal
+mkdir -p "$case_bad_journal/home/.local/state/session-save/install-transactions" "$case_bad_journal/claude" "$case_bad_journal/agents" "$case_bad_journal/config"
+printf '%s\n' '{"schema":99}' > "$case_bad_journal/home/.local/state/session-save/install-transactions/current.json"
+chmod 600 "$case_bad_journal/home/.local/state/session-save/install-transactions/current.json"
+if HOME="$case_bad_journal/home" CLAUDE_CONFIG_DIR="$case_bad_journal/claude" AGENTS_CONFIG_DIR="$case_bad_journal/agents" SESSION_SAVE_CONFIG="$case_bad_journal/config/config.json" SESSION_SAVE_HOME="$case_bad_journal/logs" "$ROOT/install.sh" >/dev/null 2>&1; then echo "FAIL malformed journal accepted"; exit 1; fi
+assert_absent "$case_bad_journal/claude/session-save-system.manifest"
+ok "malformed recovery journal fails closed before target changes"
 
 assert_contains "$ROOT/GUIDE.md" "One record per client session"
 assert_contains "$ROOT/skills/session-save/SKILL.md" "single provisional record"

@@ -2,6 +2,16 @@
 
 All notable changes to Session Save System are documented here.
 
+## 2.0.0-alpha.5 — 2026-07-26
+
+- Add `session-pickup` and `/session-pickup` as a read-only access layer for exact approved projects and saved sessions without adding a fifth capture state.
+- Add bounded `pickup-sources` metadata, selection, and content modes with exact record IDs, descriptor-relative no-follow reads, strict envelope validation, deterministic latest-Checkpoint selection, and 64 KiB/file plus 256 KiB/request limits.
+- Withhold free-form saved text before consent and bind disclosure to content through an exact selection token.
+- Require cross-client provider disclosure, narrative-read consent, exact narrative-file citations, and a separate scoped action confirmation.
+- Treat all saved metadata and narratives as untrusted evidence; never open referenced external files automatically.
+- Replace sequential adapter updates with one locked, journaled, cross-surface install/uninstall transaction and crash recovery.
+- Expand the isolated suite to 41 grouped tests, including Pickup non-mutation, malicious boundaries, migrated checkpoints, single-client installation, collision handling, injected failures, hard-crash recovery, temporary cleanup, and lock serialization.
+
 ## 2.0.0-alpha.4 — 2026-07-26
 
 - Add the clearer `session-checkpoint`, `session-close`, and `session-review` lifecycle skills and Claude slash commands.
@@ -20,7 +30,7 @@ All notable changes to Session Save System are documented here.
 - Report unregistered historical project labels in Audit without mutation or semantic merging.
 - Reject approved names that collide on one project folder slug.
 - Explicitly exclude semantic project clustering, automatic stage inference, and master-plan mutation.
-- Expand the isolated suite to 25 tests.
+- Expand the isolated suite to 26 tests.
 
 ## 2.0.0-alpha.2 — 2026-07-26
 

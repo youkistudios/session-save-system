@@ -21,7 +21,10 @@ REQUIRED = [
     "docs/ROADMAP.md", "docs/decisions/0003-client-neutral-shared-home.md",
     "docs/decisions/0004-one-installed-kernel.md",
     "docs/decisions/0005-deterministic-approved-projects.md",
+    "docs/decisions/0006-read-only-session-pickup.md",
     "docs/evidence/2026-07-26-deterministic-project-safety.md",
+    "docs/evidence/2026-07-26-session-pickup-kernel.md",
+    "skills/session-pickup/SKILL.md", "commands/session-pickup.md",
     "adapters/claude/CLIENT.md", "adapters/codex/CLIENT.md",
     "provenance/COMPONENTS.json", "automation/workflows/ci.yml",
     "automation/workflows/pages.yml",
@@ -51,14 +54,16 @@ launcher = (ROOT / "scripts/session_save_adapter.py").read_text()
 if "grep -q \"Session Save System\"" in install + uninstall:
     fail("text-search ownership detection remains")
 for phrase in (
-    "session-save-system.manifest", "install.manifest", "hash_file", "AGENTS_CONFIG_DIR",
-    "adapters/$client/CLIENT.md", "scripts/session_save_adapter.py", "LIB_DIR/session_save.py",
+    "session-save-system.manifest", "install.manifest", "AGENTS_CONFIG_DIR",
+    "scripts/session_save_adapter.py", "install.lock", "upgrade-in-progress",
+    "validate_journal", "bind_journal_roots", "atomic_write_checked", "delete_checked",
+    "session-pickup",
 ):
     if phrase not in install:
-        fail(f"dual-client installer mechanism missing: {phrase}")
-for phrase in ("is_allowed_path", "preserved modified file", "hash_file", "AGENTS_CONFIG_DIR"):
+        fail(f"transactional dual-client installer mechanism missing: {phrase}")
+for phrase in ("SESSION_SAVE_OPERATION=uninstall", "exec", "install.sh"):
     if phrase not in uninstall:
-        fail(f"dual-client uninstaller mechanism missing: {phrase}")
+        fail(f"transactional uninstaller delegation missing: {phrase}")
 if "rm -rf" in uninstall:
     fail("uninstaller must not recursively delete managed paths")
 for phrase in ("SESSION_SAVE_KERNEL", "SESSION_SAVE_LIB_DIR", "os.execv", "is_symlink"):
@@ -69,7 +74,8 @@ for phrase in (
     "fcntl.flock", "mutation_lock", "atomic_text", "safe_under", "record_id", "client_id",
     "checkpoint-path", "rebuild_index", "migrate-v1", "source_records_preserved",
     "write-audit", "project-list", "project-check", "project-register",
-    "require_registered_project",
+    "require_registered_project", "pickup-sources", "selection_token",
+    "PICKUP_FILE_MAX", "PICKUP_TOTAL_MAX", "_pickup_open_dir_path",
 ):
     if phrase not in kernel:
         fail(f"persistence mechanism missing: {phrase}")
@@ -88,6 +94,14 @@ for skill_name in SKILLS:
     description = re.search(r"^description: (.+)$", text, re.MULTILINE)
     if not description or len(description.group(1)) > 1024:
         fail(f"invalid skill description: {skill_name}")
+
+pickup_skill = (ROOT / "skills/session-pickup/SKILL.md").read_text()
+for phrase in (
+    "name: session-pickup", "CLIENT.md", "scripts/session_save.py", "selection_token",
+    "current AI provider", "exact narrative file", "one cumulative budget",
+):
+    if phrase not in pickup_skill:
+        fail(f"Pickup skill contract missing: {phrase}")
 
 for alias, canonical in ALIASES.items():
     path = ROOT / "skills" / alias / "SKILL.md"
