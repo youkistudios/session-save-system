@@ -22,11 +22,11 @@ Session Save keeps one local home while preserving both truths:
 | Moment | Claude Code | Codex | Outcome |
 |---|---|---|---|
 | **Tag** | `/session-tag` or `/st` | `$session-tag` / Skills | Name, project, gist, assets, honest verdict |
-| **Save** | `/session-save` or `/ss` | `$session-save` / Skills | Immutable in-flight checkpoint |
-| **Summarize** | `/session-summary` or `/ssum` | `$session-summary` / Skills | Human close-out and technical resume state |
-| **Audit** | `/session-audit` or `/sa` | `$session-audit` / Skills | One source-attributed project view across clients |
+| **Checkpoint** | `/session-checkpoint` | `$session-checkpoint` / Skills | Immutable in-flight checkpoint |
+| **Close** | `/session-close` | `$session-close` / Skills | Human close-out and technical resume state |
+| **Review** | `/session-review` | `$session-review` / Skills | One source-attributed project view across clients |
 
-The behavior is shared. Invocation syntax is a client adapter detail.
+The public lifecycle names are additive wrappers. The established canonical skills—`session-save` (`/ss`), `session-summary` (`/ssum`), and `session-audit` (`/sa`)—remain installed and unchanged.
 
 ## Shared file model
 
@@ -62,7 +62,7 @@ cd session-save-system
 
 The default installs both adapters:
 
-- Claude Code → `~/.claude/skills/` plus local slash-command aliases;
+- Claude Code → `~/.claude/skills/` plus lifecycle and compatibility slash commands;
 - Codex → `~/.agents/skills/`;
 - one canonical kernel → `~/.local/share/session-save/session_save.py`;
 - shared config → `~/.config/session-save/config.json`;

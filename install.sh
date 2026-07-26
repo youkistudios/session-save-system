@@ -211,6 +211,19 @@ install_client() {
     awk -F '\t' -v wanted="$1" '$2 == wanted { print $1; exit }' "$manifest"
   }
 
+  can_install_managed() {
+    source_file=$1
+    relative=$2
+    target=$target_root/$relative
+    prior=$(previous_hash "$relative")
+    has_symlink_component "$target_root" "$relative" && return 1
+    [ -L "$target" ] && return 1
+    [ -e "$target" ] && [ ! -f "$target" ] && return 1
+    [ -f "$target" ] && cmp -s "$source_file" "$target" && return 0
+    [ -f "$target" ] && [ -z "$prior" ] && return 1
+    return 0
+  }
+
   install_managed() {
     source_file=$1
     relative=$2
@@ -248,6 +261,30 @@ install_client() {
     install_managed "$REPO_DIR/skills/$skill/SKILL.md" "skills/$skill/SKILL.md" "skill $skill"
     install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$skill/CLIENT.md" "$skill adapter"
     install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$skill/scripts/session_save.py" "$skill kernel launcher"
+  done
+
+  for pair in "session-checkpoint session-save" "session-close session-summary" "session-review session-audit"; do
+    alias=${pair%% *}
+    canonical=${pair#* }
+    managed_count=$(awk -F '\t' -v prefix="skills/$canonical/" '$2 == prefix "SKILL.md" || $2 == prefix "CLIENT.md" || $2 == prefix "scripts/session_save.py" { count++ } END { print count+0 }' "$tmp_manifest")
+    alias_ready=true
+    [ "$managed_count" -eq 3 ] || alias_ready=false
+    can_install_managed "$REPO_DIR/skills/$alias/SKILL.md" "skills/$alias/SKILL.md" || alias_ready=false
+    can_install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$alias/CLIENT.md" || alias_ready=false
+    can_install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$alias/scripts/session_save.py" || alias_ready=false
+    if [ "$client" = "claude" ]; then
+      can_install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md" || alias_ready=false
+    fi
+    if [ "$alias_ready" != true ]; then
+      echo "  skipped $client alias $alias — complete managed alias unit is unavailable"
+      continue
+    fi
+    install_managed "$REPO_DIR/skills/$alias/SKILL.md" "skills/$alias/SKILL.md" "skill $alias"
+    install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$alias/CLIENT.md" "$alias adapter"
+    install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$alias/scripts/session_save.py" "$alias kernel launcher"
+    if [ "$client" = "claude" ]; then
+      install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md" "command /$alias"
+    fi
   done
 
   if [ "$client" = "claude" ]; then
@@ -302,6 +339,7 @@ if [ "$count" -gt 0 ]; then
 else
   echo "Done. Claude Code and Codex now share: $HOME_DIR"
 fi
-echo "Claude Code: /session-tag (or /st)"
-echo "Codex: mention \$session-tag or select it through /skills"
+echo "Claude Code: /session-tag · /session-checkpoint · /session-close · /session-review"
+echo "Codex: \$session-tag · \$session-checkpoint · \$session-close · \$session-review"
+echo "Existing session-save, session-summary, session-audit, and short aliases remain supported."
 echo "Uninstall removes only hash-proven adapter files; records and backups are never removed."

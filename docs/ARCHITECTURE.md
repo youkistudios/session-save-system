@@ -22,7 +22,7 @@ Claude Code adapter          Codex adapter
 
 ## Portable behavior
 
-Four open-format Agent Skills define Tag, Save, Summarize, and Audit. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` compatibility launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.
+Four open-format canonical Agent Skills implement Tag, Save, Summary, and Audit. Additive Checkpoint, Close, and Review wrappers expose clearer lifecycle language without changing those implementations. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.
 
 Claude Code receives slash-command entry points and aliases. Codex discovers the skills from `~/.agents/skills/` and invokes them through skill mention or selection.
 

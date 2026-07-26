@@ -1,6 +1,6 @@
 # Session Save — Shared Rulebook
 
-> **Single source of behavioral truth.** Claude Code and Codex use the same four moments: session-tag, session-save, session-summary, and session-audit. Installed skills are thin client adapters. This guide owns identity, naming, state, content, provenance, and safety.
+> **Single source of behavioral truth.** Claude Code and Codex use four moments: Tag, Checkpoint, Close, and Review. Public lifecycle entry points are `session-tag`, `session-checkpoint`, `session-close`, and `session-review`; the latter three are additive wrappers over the established canonical `session-save`, `session-summary`, and `session-audit` skills. Installed skills are thin client adapters. This guide owns identity, naming, state, content, provenance, and safety.
 
 ## Product boundary
 
@@ -152,7 +152,7 @@ Gist: • … • … • …
 Assets: • <name> — <real file or “in chat”> — <value>
 
 ## Session verdict: <FINISHED|LIVE|STALE> — <one sentence>
-## Route: session-summary | session-save | archive guidance
+## Route: session-close | session-checkpoint | archive guidance
 ```
 
 Assets in chat are explicitly marked because they are not durable files.
@@ -161,7 +161,7 @@ Assets in chat are explicitly marked because they are not durable files.
 
 A sweep is client-local because no adapter may pretend it can see another client’s chat list. Write `_SWEEP-REVIEW.md` before any action. Unlogged chats receive only staleness/duplicate flags, not fabricated verdicts. Wait for approval; archive one by one; never delete; capture before archive.
 
-## session-save — checkpoint
+## session-checkpoint / session-save — checkpoint
 
 Write approximately 100–300 words to the unique checkpoint path allocated by the kernel:
 
@@ -174,13 +174,13 @@ Write approximately 100–300 words to the unique checkpoint path allocated by t
 - **Watch:** …
 ```
 
-If Save runs first, resolve an exact approved project before creating one provisional record with gist:
+If Checkpoint runs first, resolve an exact approved project before creating one provisional record with gist:
 
 `Checkpoint saved; run session-tag to tag this session.`
 
 Use `project-list`; ask on ambiguity; register a new project only after explicit confirmation. Never guess from keywords or create an “unconfirmed” project folder. A later tag upgrades that same client record. An open record stays open after more checkpoints. Never write a close-out here.
 
-## session-summary — close-out
+## session-close / session-summary — close-out
 
 Require the existing `tag.md`. Write two files in place:
 
@@ -189,7 +189,7 @@ Require the existing `tag.md`. Write two files in place:
 
 Refresh these files on rerun and append revision timestamps. Then use the kernel to mark the record closed and rebuild views. Honest state beats a highlight reel.
 
-## session-audit — cross-client bird’s-eye
+## session-review / session-audit — cross-client bird’s-eye
 
 Default window is seven days. Gather sources through the kernel, then read `record.json`, `tag.md`, and `human.md` only—never raw transcripts.
 
@@ -218,7 +218,7 @@ Publish the weekly report atomically through the kernel to `audits/global/<YYYY>
 📍 <record path>
 ```
 
-### Save
+### Checkpoint
 
 ```text
 💾 Checkpoint · <Name> · <time> · <Client>
@@ -234,7 +234,7 @@ Publish the weekly report atomically through the kernel to `audits/global/<YYYY>
 📁 human.md · agent.md
 ```
 
-### Audit
+### Review
 
 Print the five-fact GIST, bottom line, and global audit path.
 

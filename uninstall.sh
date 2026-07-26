@@ -39,7 +39,7 @@ contains_client() {
 
 is_allowed_path() {
   case "$1" in
-    skills/session-tag/SKILL.md|skills/session-tag/CLIENT.md|skills/session-tag/scripts/session_save.py|skills/session-save/SKILL.md|skills/session-save/CLIENT.md|skills/session-save/scripts/session_save.py|skills/session-summary/SKILL.md|skills/session-summary/CLIENT.md|skills/session-summary/scripts/session_save.py|skills/session-audit/SKILL.md|skills/session-audit/CLIENT.md|skills/session-audit/scripts/session_save.py|commands/session-tag.md|commands/session-save.md|commands/session-summary.md|commands/session-audit.md|commands/st.md|commands/ss.md|commands/ssum.md|commands/sa.md|save-system-home) return 0 ;;
+    skills/session-tag/SKILL.md|skills/session-tag/CLIENT.md|skills/session-tag/scripts/session_save.py|skills/session-checkpoint/SKILL.md|skills/session-checkpoint/CLIENT.md|skills/session-checkpoint/scripts/session_save.py|skills/session-close/SKILL.md|skills/session-close/CLIENT.md|skills/session-close/scripts/session_save.py|skills/session-review/SKILL.md|skills/session-review/CLIENT.md|skills/session-review/scripts/session_save.py|skills/session-save/SKILL.md|skills/session-save/CLIENT.md|skills/session-save/scripts/session_save.py|skills/session-summary/SKILL.md|skills/session-summary/CLIENT.md|skills/session-summary/scripts/session_save.py|skills/session-audit/SKILL.md|skills/session-audit/CLIENT.md|skills/session-audit/scripts/session_save.py|commands/session-tag.md|commands/session-checkpoint.md|commands/session-close.md|commands/session-review.md|commands/session-save.md|commands/session-summary.md|commands/session-audit.md|commands/st.md|commands/ss.md|commands/ssum.md|commands/sa.md|save-system-home) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -64,6 +64,27 @@ uninstall_client() {
   fi
   if [ ! -f "$manifest" ]; then
     echo "  no ownership manifest; nothing removed"
+    rm -f "$remaining"; TEMP_FILES=
+    return
+  fi
+
+  preserve_unit=false
+  while IFS="$(printf '\t')" read -r expected relative; do
+    [ -n "$expected" ] && [ -n "$relative" ] || continue
+    is_allowed_path "$relative" || continue
+    case "$relative" in
+      skills/session-checkpoint/*|skills/session-close/*|skills/session-review/*|commands/session-checkpoint.md|commands/session-close.md|commands/session-review.md) ;;
+      *) continue ;;
+    esac
+    target=$target_root/$relative
+    if has_symlink_component "$target_root" "$relative"; then
+      preserve_unit=true
+    elif [ -e "$target" ] && { [ -L "$target" ] || [ ! -f "$target" ] || [ "$(hash_file "$target")" != "$expected" ]; }; then
+      preserve_unit=true
+    fi
+  done < "$manifest"
+  if [ "$preserve_unit" = true ]; then
+    echo "  preserved complete client adapter unit because a managed file was modified or unsafe"
     rm -f "$remaining"; TEMP_FILES=
     return
   fi
@@ -97,7 +118,7 @@ uninstall_client() {
     fi
   done < "$manifest"
 
-  for skill in session-tag session-save session-summary session-audit; do
+  for skill in session-tag session-checkpoint session-close session-review session-save session-summary session-audit; do
     rmdir "$target_root/skills/$skill/scripts" 2>/dev/null || true
     rmdir "$target_root/skills/$skill" 2>/dev/null || true
   done
