@@ -50,17 +50,18 @@
 
     <section class="workflow section" id="workflow">
       <div class="section-intro">
-        <h2>Four simple ways to keep the work moving.</h2>
+        <h2>Four capture moments, plus Pickup to resume.</h2>
         <p>Imagine Claude helps you plan a website today. Tomorrow, Codex helps build it. The saved handover gives you or the next AI a clear place to restart.</p>
       </div>
 
-      <p class="console-caption">Illustrative local workflow · select a moment</p>
+      <p class="console-caption">Illustrative local workflow · select a capture moment or Pickup</p>
       <div class="workflow-console">
         <div class="workflow-tabs" role="tablist" aria-label="Session Save lifecycle">
           <button type="button" role="tab" id="tab-tag" aria-controls="panel-tag" aria-selected="true" data-tab="tag"><span>01</span><b>Tag</b><small>name the work</small></button>
           <button type="button" role="tab" id="tab-checkpoint" aria-controls="panel-checkpoint" aria-selected="false" tabindex="-1" data-tab="checkpoint"><span>02</span><b>Checkpoint</b><small>save your place</small></button>
           <button type="button" role="tab" id="tab-close" aria-controls="panel-close" aria-selected="false" tabindex="-1" data-tab="close"><span>03</span><b>Close</b><small>save the result</small></button>
           <button type="button" role="tab" id="tab-review" aria-controls="panel-review" aria-selected="false" tabindex="-1" data-tab="review"><span>04</span><b>Review</b><small>see saved notes</small></button>
+          <button type="button" role="tab" id="tab-pickup" aria-controls="panel-pickup" aria-selected="false" tabindex="-1" data-tab="pickup"><span>05</span><b>Pickup</b><small>resume saved work</small></button>
         </div>
 
         <div class="terminal" aria-label="Illustrative Session Save output">
@@ -99,6 +100,16 @@
 <span class="codex">[Codex]</span> website build summary
 <span class="path">→ audits/global/2026-W30_audit.md</span></pre>
             <p class="command-note">In Claude Code, use <code>/session-review</code>. The older <code>/session-audit</code> and <code>/sa</code> still work. In Codex, use <code>$session-review</code> or the older <code>$session-audit</code>.</p>
+          </section>
+          <section class="terminal-panel" id="panel-pickup" role="tabpanel" aria-labelledby="tab-pickup" data-panel="pickup">
+            <p class="intent">Bring an exact saved handover into a fresh session.</p>
+            <pre><span class="prompt">claude ›</span> /session-pickup
+
+<span class="ok">✓</span> project selected: Website Launch
+<span class="ok">✓</span> saved session selected: Claude · exact record
+<span class="ok">✓</span> approved notes read after disclosure
+<span class="path">→ cited brief · confirm one bounded next step</span></pre>
+            <p class="command-note">In Codex, use <code>$session-pickup</code>. Pickup lists metadata first, waits for consent before reading selected notes, and asks before acting. It is read-only resume access—not another capture moment.</p>
           </section>
         </div>
       </div>
