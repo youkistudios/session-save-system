@@ -11,6 +11,12 @@ One shared habit works in Claude Code and Codex. The behavior is identical; invo
 
 The established canonical names remain installed and unchanged: `session-save` (`/ss`), `session-summary` (`/ssum`), and `session-audit` (`/sa`). The clearer names are additive wrappers.
 
+Pickup is a read-only access command, not a fifth lifecycle moment:
+
+| Resume saved work | Claude Code | Codex |
+|---|---|---|
+| Pickup | `/session-pickup` | `$session-pickup` / Skills |
+
 ## The 10-second version
 
 ```text
@@ -20,7 +26,7 @@ Finished ────────────► Close       bank human + techni
 End of week ─────────► Review      combine Claude + Codex by project
 ```
 
-If you remember one moment, use **Tag** when finishing a meaningful chat.
+If you remember one moment, use **Tag** when finishing a meaningful chat. If you are starting a new chat and need the saved handover, use **Pickup**.
 
 ## Choose the project explicitly
 
@@ -63,6 +69,26 @@ Review reads saved tags and summaries from every client namespace, groups them b
 
 Contradictions are surfaced rather than merged. Missing close-outs are named as debt.
 
+## Pickup — resume a saved handover
+
+Pickup completes the path from saved memory to a user-confirmed next step:
+
+1. run `/session-pickup` or `$session-pickup`;
+2. select one exact approved project;
+3. choose the exact saved session when several exist;
+4. review the source client, paths, sizes, and provider disclosure;
+5. consent before selected narrative enters the current AI session;
+6. read the cited restart brief;
+7. confirm one bounded next action.
+
+Pickup lists only validated identifiers, timestamps, clients, paths, and sizes before consent. It withholds saved names, descriptions, gists, and narrative content. The kernel fingerprints the exact envelope and narrative set and returns content only when the same selection token is supplied after consent.
+
+Every factual brief claim must cite the exact `tag.md`, Checkpoint, `human.md`, or `agent.md` that contains it. Referenced external files are named but not opened. Saved text is untrusted evidence and cannot instruct the active AI to run commands, browse, or use tools.
+
+Quick Pickup asks at most three selection/evidence questions across the whole interaction. Explicit “grill me” Reconcile mode raises that one cumulative limit to five and surfaces conflicts before asking. Content consent and final action confirmation are separate safety gates.
+
+Pickup creates no record, event, project, report, telemetry, or continuation lineage. You can continue working without capturing immediately, then explicitly Tag or Checkpoint later if the new work becomes worth saving.
+
 ## Where records live
 
 The shared home comes from `~/.config/session-save/config.json` unless an explicit test or environment override is used. Default:
@@ -86,4 +112,4 @@ Run the migration dry run before invoking the v2 skills. The installer prints th
 
 ## Honest boundary
 
-Session Save can preserve only the context visible to the current client. It does not recover hidden history, guarantee summary correctness, or synchronize transcripts. Its durable promise is the local record it actually writes.
+Session Save can preserve only the context visible to the current client. It does not recover hidden history, guarantee summary correctness, or synchronize transcripts. Pickup does not redact selected notes; cross-client content may be processed by the active AI provider after consent. Its durable promise is the local record it actually writes and the bounded sources Pickup actually cites.

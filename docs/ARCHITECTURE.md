@@ -6,7 +6,7 @@ Session Save v2 separates portable behavior, client adaptation, deterministic pe
 Claude Code adapter          Codex adapter
 ~/.claude/skills/            ~/.agents/skills/
           │                         │
-          └──── same four Agent Skills ────┐
+          └── four capture skills + Pickup ──┐
                                            ▼
                               thin local launchers
                                            │
@@ -33,7 +33,7 @@ Capture remains deliberate and user-invoked. Memory is useful without Session Sa
 
 ## Portable behavior
 
-Four open-format canonical Agent Skills implement Tag, Save, Summary, and Audit. Additive Checkpoint, Close, and Review wrappers expose clearer lifecycle language without changing those implementations. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.
+Four open-format canonical Agent Skills implement Tag, Save, Summary, and Audit. Additive Checkpoint, Close, and Review wrappers expose clearer lifecycle language without changing those implementations. Pickup is a separate read-only access skill, not another capture state. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.
 
 Claude Code receives slash-command entry points and aliases. Codex discovers the skills from `~/.agents/skills/` and invokes them through skill mention or selection.
 
@@ -90,6 +90,20 @@ Multiple clients cannot safely mutate one Markdown index directly. The kernel th
 
 A stale or interrupted derived view can be rebuilt. Source records remain the authority.
 
+## Pickup read plane
+
+`pickup-sources` is the only supported reader for restart briefs. It has three phases:
+
+1. approved-project and candidate metadata;
+2. exact record selection with narrative paths, sizes, fingerprints, and a selection token;
+3. bounded content returned only with that unchanged token after consent.
+
+The read plane opens the configured home and every descendant through retained, no-follow directory descriptors. It validates schema, types, project/client/path agreement, timestamps, status, and record IDs before ranking. Reads are capped at 64 KiB per narrative and 256 KiB per request. Directory, registry, envelope, checkpoint, and malformed-record counts are bounded.
+
+Pre-consent output contains no saved descriptions, session names, gists, narrative text, or attacker-controlled corruption details. A changed envelope or narrative invalidates the selection token. The model never opens returned paths; external artifact references remain references.
+
+Pickup performs no mutation and emits no event, receipt, record, project, report, telemetry, or continuation relationship. The skill adds provider disclosure, content consent, exact file citations, evidence questions, and a separate scoped action confirmation around this kernel boundary.
+
 ## Global audit
 
 `audit-sources` returns record envelopes, canonical approved project names, registration state, and available tag/human/agent paths across all clients. The skill groups only the returned approved identity and attributes every factual bullet to its client and source path. Case-only migrated labels may map to one canonical project; punctuation and semantic variants do not. Unregistered labels remain separate; contradictions remain visible. Audit cannot mutate the project registry or a master plan. `write-audit` atomically publishes the combined weekly report.
@@ -106,9 +120,13 @@ The shared config is never an uninstall target.
 
 ## Installation boundary
 
-Claude and Codex have separate SHA-256 ownership manifests and backup trees. The shared kernel has its own exact manifest. Unrelated client collisions are skipped; an unowned conflicting shared kernel fails installation. Managed replacements are backed up. Uninstall considers only allowlisted regular files whose current hash matches the relevant manifest, and retains the shared kernel while any managed launcher remains.
+Claude and Codex have separate SHA-256 ownership manifests. The shared kernel has its own exact manifest. Unrelated client collisions are skipped; an unowned conflicting shared kernel fails installation. Managed replacements are backed up below the Session Save state directory.
 
-The shared home, config, legacy sources, migration receipts, and backups are user data and remain untouched.
+Install, uninstall, and recovery share one retained global lock and one cross-surface journal. The journal binds exact allowlisted operations to root directory identities, prior/intended hashes, exact backup paths, and journaled temporary names. Every mutation is revalidated and executed relative to retained root descriptors. A crash before, during, or after replacement is recovered on the next run; an unprovable state fails closed behind the upgrade marker. Ownership manifests commit last.
+
+Uninstall considers only allowlisted regular files whose current hash matches the relevant manifest and retains the shared kernel while any managed launcher remains. Alpha.5 must be uninstalled before reinstalling alpha.4 because alpha.4 does not know Pickup paths.
+
+The shared home’s records, config, legacy sources, migration receipts, and backups remain user data and are not deletion targets.
 
 ## Migration
 

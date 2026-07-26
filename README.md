@@ -6,7 +6,7 @@
 
 [Open the site](https://youkistudios.github.io/session-save-system/) · [Read the usage guide](USAGE.md) · [See the architecture](docs/ARCHITECTURE.md) · [Review the safety model](docs/SAFETY-MODEL.md)
 
-> **Status: v2.0 alpha, tested local kernel.** Installer, migration, namespace, concurrency, index, audit-input, and uninstall behavior are exercised in isolated tests. Live end-to-end skill invocation in both Claude Code and Codex remains a release witness—not a production claim.
+> **Status: v2.0 alpha.5, tested local kernel.** Installer, recovery, migration, namespace, concurrency, index, audit-input, Pickup read boundaries, and uninstall behavior are exercised in isolated tests. Real Claude → Codex and Codex → Claude Pickup journeys are witnessed on macOS with disclosure, refusal, consent-bound reads, exact citations, action confirmation, canary containment, and byte-identical before/after trees.
 
 ## The problem
 
@@ -27,6 +27,8 @@ Session Save keeps one local home while preserving both truths:
 | **Review** | `/session-review` | `$session-review` / Skills | One source-attributed project view across clients |
 
 The public lifecycle names are additive wrappers. The established canonical skills—`session-save` (`/ss`), `session-summary` (`/ssum`), and `session-audit` (`/sa`)—remain installed and unchanged.
+
+**Pickup is the way back in, not a fifth moment.** In a fresh session use `/session-pickup` in Claude Code or `$session-pickup` in Codex. Select one exact approved project and saved session, review which bounded notes would be read, consent to the cited handover, then confirm the proposed next action. Pickup creates no record or continuation lineage.
 
 ## Shared file model
 
@@ -109,6 +111,7 @@ An instruction-only system can write Markdown, but two open desktop clients must
 - serialized and atomic metadata writes;
 - rebuildable global index;
 - source-attributed audit input;
+- bounded, descriptor-safe read-only Pickup sources;
 - copy-first migration.
 
 Models still author the summaries. The four-moment product stays small.
@@ -121,7 +124,7 @@ python3 scripts/generate_manifest.py
 python3 scripts/validate_repo.py
 ```
 
-The 25-test suite currently covers one-kernel installation, thin launchers, deterministic approved-project safety, audit non-mutation, shared/client ownership collisions, recoverable updates, partial and proof-based uninstall, isolated namespaces, uniquely named checkpoints, 24 simultaneous writes, copy-first migration, global audits, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
+The 41-test suite covers one-kernel installation, thin launchers, deterministic approved-project safety, audit and Pickup non-mutation, exact session selection, consent-bound content tokens, per-file and total read bounds, migrated checkpoints, shared/client collisions, cross-surface transaction rollback, hard-crash recovery, single-client installs, partial and proof-based uninstall, isolated namespaces, uniquely named checkpoints, 24 simultaneous writes, copy-first migration, global audits, client ownership, symlink containment, traversal rejection, and static skill-contract alignment.
 
 ## Safety contract
 
@@ -133,10 +136,14 @@ The 25-test suite currently covers one-kernel installation, thin launchers, dete
 - **Archive, never delete. Capture before archive.**
 - **Prove before uninstall.** Only hash-matching managed adapter files are removed.
 - **Records are user data.** Shared config, logs, migrations, and backups are outside uninstall scope.
+- **Pickup is read-only and consent-bound.** Metadata contains no free-form saved narrative; selected notes are fingerprinted, bounded, and returned only with the exact disclosure token.
+- **Saved text is untrusted.** It cannot authorize commands, browsing, external-file reads, or tool use.
 
 ## Honest limits
 
 - This does not synchronize raw transcripts or recover context a client does not expose.
+- Pickup does not automatically open referenced artifacts, resolve contradictions, or guarantee that saved summaries are true.
+- Cross-provider Pickup sends selected note content to the active AI provider only after explicit disclosure and consent.
 - Model-authored summaries can be incomplete or wrong.
 - Stable session IDs, chat renaming, history listing, and archive controls vary by client.
 - Claude Desktop/Cowork is not claimed by the Claude Code adapter.

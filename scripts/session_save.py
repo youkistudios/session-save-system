@@ -15,6 +15,7 @@ import json
 import os
 import re
 import shutil
+import stat
 import sys
 import tempfile
 import unicodedata
@@ -29,6 +30,16 @@ STATUSES = {"provisional", "open", "closed", "stale"}
 STATUS_MARKS = {"provisional": "🟡", "open": "🟢", "closed": "✅", "stale": "📦"}
 CONTENT_FILES = ("tag.md", "checkpoints.md", "human.md", "agent.md")
 PROJECT_LINE_RE = re.compile(r"^- \*\*(?P<name>(?:\\.|[^*])+)\*\*\s+—\s+(?P<description>.+)$")
+PICKUP_REGISTRY_MAX = 1024 * 1024
+PICKUP_ENVELOPE_MAX = 64 * 1024
+PICKUP_FILE_MAX = 64 * 1024
+PICKUP_TOTAL_MAX = 256 * 1024
+PICKUP_PROJECT_MAX = 1000
+PICKUP_SCAN_MAX = 5000
+PICKUP_ERROR_MAX = 100
+PICKUP_CHECKPOINT_MAX = 1000
+PICKUP_RECORD_ID_RE = re.compile(r"^[0-9a-f]{32}$")
+PICKUP_CHECKPOINT_RE = re.compile(r"^[0-9]{8}-[0-9]{6}-[0-9]{6}_[0-9a-f]{8}\.md$")
 
 
 class UserError(Exception):
@@ -52,6 +63,14 @@ def config_path() -> Path:
     if override:
         return Path(override).expanduser()
     return Path.home() / ".config" / "session-save" / "config.json"
+
+
+def state_dir() -> Path:
+    return Path(os.environ.get("SESSION_SAVE_STATE_DIR", Path.home() / ".local" / "state" / "session-save")).expanduser()
+
+
+def upgrade_marker() -> Path:
+    return state_dir() / "upgrade-in-progress"
 
 
 def resolve_home(explicit: str | None = None) -> Path:
@@ -671,6 +690,527 @@ def project_dir_name(value: str) -> str:
     return value.replace("-", " ").strip().title() or "Unconfirmed"
 
 
+def _pickup_open_dir_path(path: Path) -> int:
+    """Open an absolute directory without following any path component."""
+    path = Path(os.path.abspath(path.expanduser()))
+    if path.is_symlink():
+        fail(f"Pickup root cannot be a symlink: {path}")
+    # Normalize platform aliases such as macOS /tmp -> /private/tmp without following the final root.
+    path = path.parent.resolve() / path.name
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(os.sep, flags)
+    try:
+        for part in path.parts[1:]:
+            next_fd = os.open(part, flags | nofollow, dir_fd=fd)
+            os.close(fd)
+            fd = next_fd
+        info = os.fstat(fd)
+        if not stat.S_ISDIR(info.st_mode):
+            fail(f"Pickup root is not a directory: {path}")
+        return fd
+    except Exception:
+        os.close(fd)
+        raise
+
+
+def _pickup_open_dir_at(parent_fd: int, name: str) -> int:
+    if not name or name in {".", ".."} or "/" in name or "\0" in name:
+        fail("unsafe directory entry during Pickup")
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(name, flags, dir_fd=parent_fd)
+    if not stat.S_ISDIR(os.fstat(fd).st_mode):
+        os.close(fd)
+        fail(f"Pickup entry is not a directory: {name}")
+    return fd
+
+
+def _pickup_read_at(parent_fd: int, name: str, maximum: int) -> tuple[bytes, os.stat_result]:
+    if not name or name in {".", ".."} or "/" in name or "\0" in name:
+        fail("unsafe file entry during Pickup")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    fd = os.open(name, flags, dir_fd=parent_fd)
+    try:
+        before = os.fstat(fd)
+        if not stat.S_ISREG(before.st_mode):
+            fail(f"Pickup source is not a regular file: {name}")
+        if before.st_size > maximum:
+            fail(f"Pickup source exceeds {maximum} bytes: {name}")
+        chunks: list[bytes] = []
+        size = 0
+        while True:
+            chunk = os.read(fd, min(65536, maximum + 1 - size))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            size += len(chunk)
+            if size > maximum:
+                fail(f"Pickup source grew beyond {maximum} bytes: {name}")
+        after = os.fstat(fd)
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (
+            after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
+        ) or size != after.st_size:
+            fail(f"Pickup source changed while being read: {name}")
+        return b"".join(chunks), after
+    finally:
+        os.close(fd)
+
+
+def _pickup_read_path(path: Path, maximum: int) -> bytes | None:
+    try:
+        parent_fd = _pickup_open_dir_path(path.parent)
+    except FileNotFoundError:
+        return None
+    try:
+        try:
+            data, _ = _pickup_read_at(parent_fd, path.name, maximum)
+            return data
+        except FileNotFoundError:
+            return None
+    finally:
+        os.close(parent_fd)
+
+
+def resolve_pickup_home(explicit: str | None = None) -> Path:
+    raw = explicit
+    if not raw:
+        for variable in ("SESSION_SAVE_HOME", "SAVE_SYSTEM_HOME"):
+            if os.environ.get(variable):
+                raw = os.environ[variable]
+                break
+    if not raw:
+        config = config_path()
+        data = _pickup_read_path(config, PICKUP_ENVELOPE_MAX)
+        if data is not None:
+            try:
+                payload = json.loads(data.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                fail(f"cannot read Pickup config {config}: {exc}")
+            raw = payload.get("home") if isinstance(payload, dict) else None
+            if raw is not None and not isinstance(raw, str):
+                fail("Session Save config home must be a string")
+    if not raw:
+        legacy = Path.home() / ".claude" / "save-system-home"
+        data = _pickup_read_path(legacy, PICKUP_ENVELOPE_MAX)
+        if data is not None:
+            try:
+                raw = data.decode("utf-8").strip()
+            except UnicodeDecodeError as exc:
+                fail(f"cannot read legacy home pointer: {exc}")
+    if not raw:
+        raw = str(Path.home() / "Desktop" / "session-logs")
+    home = Path(os.path.abspath(Path(raw).expanduser()))
+    if home.is_symlink():
+        fail(f"Pickup root cannot be a symlink: {home}")
+    home = home.parent.resolve() / home.name
+    try:
+        fd = _pickup_open_dir_path(home)
+    except FileNotFoundError:
+        fail(f"Session Save home does not exist: {home}")
+    else:
+        os.close(fd)
+    return home
+
+
+def _pickup_parse_registry(text: str) -> list[dict[str, str]]:
+    projects: list[dict[str, str]] = []
+    names: set[str] = set()
+    keys: dict[str, str] = {}
+    slugs: dict[str, str] = {}
+    fence_char: str | None = None
+    fence_length = 0
+    for line in text.splitlines():
+        fence = re.match(r"^ {0,3}(?P<run>`{3,}|~{3,})(?P<tail>.*)$", line)
+        if fence:
+            run, tail = fence.group("run"), fence.group("tail")
+            if fence_char is None:
+                fence_char, fence_length = run[0], len(run)
+            elif run[0] == fence_char and len(run) >= fence_length and not tail.strip():
+                fence_char, fence_length = None, 0
+            continue
+        if fence_char is not None or line.startswith((" ", "\t")):
+            continue
+        match = PROJECT_LINE_RE.fullmatch(line)
+        if not match:
+            if line.startswith("- **"):
+                fail(f"malformed approved project registry entry: {line}")
+            continue
+        name = decode_project_name(match.group("name")).strip()
+        key, slug = project_key(name), project_folder(name)
+        if name in names or key in keys or slug in slugs:
+            fail(f"duplicate or colliding approved project: {name}")
+        names.add(name)
+        keys[key], slugs[slug] = name, name
+        projects.append({"name": name, "slug": slug, "description": match.group("description").strip()})
+        if len(projects) > PICKUP_PROJECT_MAX:
+            fail(f"Pickup project registry exceeds {PICKUP_PROJECT_MAX} entries")
+    if fence_char is not None:
+        fail("project registry contains an unclosed Markdown fence")
+    return projects
+
+
+def _pickup_timestamp(value: Any, field: str) -> dt.datetime:
+    if not isinstance(value, str):
+        fail(f"{field} must be a string")
+    try:
+        parsed = dt.datetime.fromisoformat(value)
+    except ValueError:
+        fail(f"{field} is not an ISO timestamp")
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        fail(f"{field} must include a timezone")
+    utc = parsed.astimezone(dt.timezone.utc)
+    if utc < dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc):
+        fail(f"{field} predates 1970")
+    if utc > dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=24):
+        fail(f"{field} is more than 24 hours in the future")
+    return utc
+
+
+def _pickup_validate_record(
+    payload: Any, project_entry: dict[str, str], project_dir: str, client_dir: str, record_dir: str
+) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        fail("record envelope must be an object")
+    required_types = {
+        "schema_version": str, "record_id": str, "client_id": str, "project": str,
+        "session_slug": str, "name": str, "status": str, "created_at": str, "updated_at": str,
+    }
+    for field, expected in required_types.items():
+        if type(payload.get(field)) is not expected:
+            fail(f"record field {field} has the wrong type")
+    if payload["schema_version"] != SCHEMA_VERSION:
+        fail(f"unsupported record schema: {payload['schema_version']}")
+    if not PICKUP_RECORD_ID_RE.fullmatch(payload["record_id"]):
+        fail("record_id must be 32 lowercase hexadecimal characters")
+    client = safe_client(payload["client_id"])
+    if client != client_dir:
+        fail("record client does not match its physical client directory")
+    project = safe_project(payload["project"])
+    if project_key(project) != project_key(project_entry["name"]):
+        fail("record project does not match the selected approved project")
+    if project_dir.lower() != project_entry["slug"].lower():
+        fail("record project folder does not match its approved project slug")
+    slug = safe_label(payload["session_slug"], "session slug")
+    if len(slug) > 80 or slugify(slug) != slug:
+        fail("record session_slug is not canonical")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}_.+", record_dir):
+        fail("record directory lacks an ISO date prefix")
+    expected = record_dir[11:].split("--", 1)[0]
+    if expected != slug:
+        fail("record session_slug does not match its physical directory")
+    if not payload["name"].strip() or len(payload["name"]) > 512:
+        fail("record name is empty or too long")
+    if payload["status"] not in STATUSES:
+        fail("record status is invalid")
+    created = _pickup_timestamp(payload["created_at"], "created_at")
+    updated = _pickup_timestamp(payload["updated_at"], "updated_at")
+    if updated < created:
+        fail("record updated_at is earlier than created_at")
+    clean = dict(payload)
+    clean["_created_utc"] = created
+    clean["_updated_utc"] = updated
+    return clean
+
+
+def _pickup_error(errors: list[dict[str, str]], path: Path, message: str) -> None:
+    if len(errors) >= PICKUP_ERROR_MAX:
+        fail(f"Pickup malformed-record errors exceed {PICKUP_ERROR_MAX}; no partial ranking returned")
+    errors.append({"path": str(path), "error": message})
+
+
+def _pickup_names(directory_fd: int, maximum: int, label: str) -> list[str]:
+    names: list[str] = []
+    with os.scandir(directory_fd) as entries:
+        for entry in entries:
+            names.append(entry.name)
+            if len(names) > maximum:
+                fail(f"{label} exceeds {maximum} entries")
+    return sorted(names)
+
+
+def _pickup_scan(home: Path) -> tuple[list[dict[str, str]], list[dict[str, Any]], list[dict[str, str]], int]:
+    root_fd = _pickup_open_dir_path(home)
+    errors: list[dict[str, str]] = []
+    records: list[dict[str, Any]] = []
+    seen_ids: dict[str, Path] = {}
+    duplicate_ids: set[str] = set()
+    scanned = 0
+    try:
+        sessions_fd = _pickup_open_dir_at(root_fd, "sessions")
+        try:
+            registry_data, _ = _pickup_read_at(sessions_fd, "_PROJECTS.md", PICKUP_REGISTRY_MAX)
+            try:
+                projects = _pickup_parse_registry(registry_data.decode("utf-8"))
+            except UnicodeDecodeError as exc:
+                fail(f"project registry is not UTF-8: {exc}")
+            session_names = _pickup_names(sessions_fd, PICKUP_SCAN_MAX, "Pickup sessions directory")
+            scanned += len(session_names)
+            actual_dirs = {name.lower(): name for name in session_names if name != "_PROJECTS.md"}
+            for project in projects:
+                physical = actual_dirs.get(project["slug"].lower())
+                if not physical:
+                    continue
+                try:
+                    project_fd = _pickup_open_dir_at(sessions_fd, physical)
+                except OSError as exc:
+                    _pickup_error(errors, home / "sessions" / physical, str(exc))
+                    continue
+                try:
+                    client_names = _pickup_names(project_fd, PICKUP_SCAN_MAX - scanned, "Pickup directory scan")
+                    for client_name in client_names:
+                        # Copy-first migration preserves legacy v1 record directories beside client namespaces.
+                        if re.match(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}_", client_name) or client_name.startswith("_"):
+                            continue
+                        scanned += 1
+                        if scanned > PICKUP_SCAN_MAX:
+                            fail(f"Pickup directory scan exceeds {PICKUP_SCAN_MAX} entries")
+                        try:
+                            safe_client(client_name)
+                            client_fd = _pickup_open_dir_at(project_fd, client_name)
+                        except (OSError, UserError) as exc:
+                            _pickup_error(errors, home / "sessions" / physical / client_name, str(exc))
+                            continue
+                        try:
+                            record_names = _pickup_names(client_fd, PICKUP_SCAN_MAX - scanned, "Pickup directory scan")
+                            for record_name in record_names:
+                                scanned += 1
+                                if scanned > PICKUP_SCAN_MAX:
+                                    fail(f"Pickup directory scan exceeds {PICKUP_SCAN_MAX} entries")
+                                record_path = home / "sessions" / physical / client_name / record_name
+                                try:
+                                    record_fd = _pickup_open_dir_at(client_fd, record_name)
+                                    try:
+                                        raw, _ = _pickup_read_at(record_fd, "record.json", PICKUP_ENVELOPE_MAX)
+                                    finally:
+                                        os.close(record_fd)
+                                    payload = json.loads(raw.decode("utf-8"))
+                                    record = _pickup_validate_record(payload, project, physical, client_name, record_name)
+                                    if record["record_id"] in seen_ids:
+                                        duplicate_ids.add(record["record_id"])
+                                        fail(f"duplicate record ID also appears at {seen_ids[record['record_id']]}")
+                                    seen_ids[record["record_id"]] = record_path
+                                    records.append({
+                                        "record": record,
+                                        "envelope_sha256": hashlib.sha256(raw).hexdigest(),
+                                        "project": project["name"],
+                                        "path": record_path,
+                                        "relative": ("sessions", physical, client_name, record_name),
+                                    })
+                                except (OSError, UnicodeDecodeError, json.JSONDecodeError, UserError) as exc:
+                                    _pickup_error(errors, record_path / "record.json", str(exc))
+                        finally:
+                            os.close(client_fd)
+                finally:
+                    os.close(project_fd)
+        finally:
+            os.close(sessions_fd)
+    finally:
+        os.close(root_fd)
+    if duplicate_ids:
+        fail(f"duplicate record IDs make Pickup ambiguous: {', '.join(sorted(duplicate_ids))}")
+    records.sort(key=lambda item: (
+        item["record"]["_updated_utc"], item["record"]["client_id"], item["record"]["record_id"]
+    ), reverse=True)
+    return projects, records, errors, scanned
+
+
+def _pickup_record_fd(root_fd: int, relative: tuple[str, ...]) -> int:
+    current = os.dup(root_fd)
+    try:
+        for part in relative:
+            next_fd = _pickup_open_dir_at(current, part)
+            os.close(current)
+            current = next_fd
+        return current
+    except Exception:
+        os.close(current)
+        raise
+
+
+def _pickup_narrative_metadata(home: Path, root_fd: int, item: dict[str, Any]) -> list[dict[str, Any]]:
+    record_fd = _pickup_record_fd(root_fd, item["relative"])
+    result: list[dict[str, Any]] = []
+    try:
+        def add_regular(parent_fd: int, filename: str, kind: str, relative_suffix: tuple[str, ...], legacy: bool = False) -> None:
+            try:
+                raw, info = _pickup_read_at(parent_fd, filename, PICKUP_FILE_MAX)
+            except FileNotFoundError:
+                return
+            result.append({
+                "kind": kind,
+                "path": str(item["path"].joinpath(*relative_suffix)),
+                "size": info.st_size,
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "legacy": legacy,
+                "_relative": relative_suffix,
+            })
+
+        add_regular(record_fd, "tag.md", "tag", ("tag.md",))
+        checkpoint_found = False
+        try:
+            checkpoints_fd = _pickup_open_dir_at(record_fd, "checkpoints")
+        except FileNotFoundError:
+            checkpoints_fd = None
+        if checkpoints_fd is not None:
+            try:
+                names = _pickup_names(checkpoints_fd, PICKUP_CHECKPOINT_MAX, "checkpoint directory")
+                valid = sorted((name for name in names if PICKUP_CHECKPOINT_RE.fullmatch(name)), reverse=True)
+                if valid:
+                    add_regular(checkpoints_fd, valid[0], "checkpoint", ("checkpoints", valid[0]))
+                    checkpoint_found = True
+            finally:
+                os.close(checkpoints_fd)
+        migration = item["record"].get("migration")
+        legacy_marker = (
+            isinstance(migration, dict)
+            and isinstance(migration.get("source"), str)
+            and bool(migration.get("source"))
+            and isinstance(migration.get("copied_at"), str)
+        )
+        if not checkpoint_found and legacy_marker:
+            add_regular(record_fd, "checkpoints.md", "checkpoint", ("checkpoints.md",), legacy=True)
+        add_regular(record_fd, "human.md", "human-close", ("human.md",))
+        add_regular(record_fd, "agent.md", "technical-note", ("agent.md",))
+        return result
+    finally:
+        os.close(record_fd)
+
+
+def _pickup_public_errors(errors: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [{
+        "code": "invalid-record",
+        "source_fingerprint": hashlib.sha256(item["path"].encode()).hexdigest(),
+    } for item in errors]
+
+
+def pickup_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
+    if args.limit < 1 or args.limit > 8:
+        fail("Pickup limit must be from 1 through 8")
+    if len(args.record_id) > 5:
+        fail("Pickup accepts at most five exact record IDs")
+    if args.include_content and not args.record_id:
+        fail("--include-content requires at least one --record-id")
+    if args.include_content and not args.selection_token:
+        fail("--include-content requires the exact --selection-token from metadata disclosure")
+    if args.selection_token and not args.include_content:
+        fail("--selection-token is valid only with --include-content")
+    if args.record_id and not args.project:
+        fail("--record-id requires --project")
+    projects, records, errors, scanned = _pickup_scan(home)
+    public_errors = _pickup_public_errors(errors)
+    by_key = {project_key(item["name"]): item for item in projects}
+    if not args.project:
+        latest: dict[str, dict[str, Any]] = {}
+        for item in records:
+            latest.setdefault(project_key(item["project"]), item)
+        project_rows = []
+        for project in projects:
+            recent = latest.get(project_key(project["name"]))
+            project_rows.append({
+                "name": project["name"],
+                "slug": project["slug"],
+                "latest_updated_at": recent["record"]["updated_at"] if recent else None,
+                "latest_client_id": recent["record"]["client_id"] if recent else None,
+            })
+        project_rows.sort(key=lambda item: (item["latest_updated_at"] is not None, item["latest_updated_at"] or "", item["name"]), reverse=True)
+        return {"mode": "projects", "home": str(home), "projects": project_rows[:args.limit], "corrupt_records": public_errors, "corrupt_record_count": len(public_errors)}
+    key = project_key(args.project)
+    if key not in by_key:
+        fail(f"project is not approved: {safe_project(args.project)}; select or register it explicitly")
+    canonical = by_key[key]["name"]
+    candidates = [item for item in records if project_key(item["project"]) == key]
+    if not args.record_id:
+        rows = [{
+            "record_id": item["record"]["record_id"],
+            "client_id": item["record"]["client_id"],
+            "project": canonical,
+            "status": item["record"]["status"],
+            "created_at": item["record"]["created_at"],
+            "updated_at": item["record"]["updated_at"],
+            "path": str(item["path"]),
+        } for item in candidates[:args.limit]]
+        return {"mode": "candidates", "home": str(home), "project": canonical, "candidates": rows, "corrupt_records": public_errors, "corrupt_record_count": len(public_errors)}
+    if len(set(args.record_id)) != len(args.record_id):
+        fail("duplicate --record-id values are not allowed")
+    lookup = {item["record"]["record_id"]: item for item in candidates}
+    missing = [record_id for record_id in args.record_id if record_id not in lookup]
+    if missing:
+        fail(f"record IDs do not exist in approved project {canonical}: {', '.join(missing)}")
+    selected = [lookup[record_id] for record_id in args.record_id]
+    root_fd = _pickup_open_dir_path(home)
+    try:
+        prepared: list[tuple[dict[str, Any], list[dict[str, Any]]]] = []
+        receipt: list[dict[str, Any]] = []
+        for item in selected:
+            narratives = _pickup_narrative_metadata(home, root_fd, item)
+            prepared.append((item, narratives))
+            receipt.append({
+                "record_id": item["record"]["record_id"],
+                "envelope_sha256": item["envelope_sha256"],
+                "narratives": [{
+                    "kind": narrative["kind"], "path": narrative["path"],
+                    "size": narrative["size"], "sha256": narrative["sha256"],
+                } for narrative in narratives],
+            })
+        token_payload = {"project": canonical, "records": receipt}
+        selection_token = hashlib.sha256(json.dumps(token_payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        if args.include_content and args.selection_token != selection_token:
+            fail("selected records changed after disclosure; list them again and request fresh consent")
+        selected_rows = []
+        total = 0
+        for item, narratives in prepared:
+            if args.include_content:
+                record_fd = _pickup_record_fd(root_fd, item["relative"])
+                try:
+                    for narrative in narratives:
+                        parent_fd = os.dup(record_fd)
+                        try:
+                            for component in narrative["_relative"][:-1]:
+                                next_fd = _pickup_open_dir_at(parent_fd, component)
+                                os.close(parent_fd)
+                                parent_fd = next_fd
+                            remaining = PICKUP_TOTAL_MAX - total
+                            maximum = min(PICKUP_FILE_MAX, remaining)
+                            if maximum < narrative["size"]:
+                                fail(f"Pickup selected content exceeds {PICKUP_TOTAL_MAX} bytes")
+                            raw, _ = _pickup_read_at(parent_fd, narrative["_relative"][-1], maximum)
+                            if hashlib.sha256(raw).hexdigest() != narrative["sha256"]:
+                                fail(f"Pickup narrative changed after disclosure: {narrative['path']}")
+                            total += len(raw)
+                            try:
+                                narrative["content"] = raw.decode("utf-8")
+                            except UnicodeDecodeError as exc:
+                                fail(f"Pickup narrative is not UTF-8: {narrative['path']}: {exc}")
+                        finally:
+                            os.close(parent_fd)
+                finally:
+                    os.close(record_fd)
+            for narrative in narratives:
+                narrative.pop("_relative", None)
+            row = {
+                "record_id": item["record"]["record_id"],
+                "client_id": item["record"]["client_id"],
+                "project": canonical,
+                "status": item["record"]["status"],
+                "created_at": item["record"]["created_at"],
+                "updated_at": item["record"]["updated_at"],
+                "path": str(item["path"]),
+                "narratives": narratives,
+            }
+            if args.include_content:
+                row["name"] = item["record"]["name"]
+            selected_rows.append(row)
+    finally:
+        os.close(root_fd)
+    return {
+        "mode": "content" if args.include_content else "selection",
+        "home": str(home), "project": canonical, "selected": selected_rows,
+        "selection_token": selection_token,
+        "content_bytes": total, "content_limit": PICKUP_TOTAL_MAX,
+        "corrupt_records": public_errors, "corrupt_record_count": len(public_errors),
+    }
+
+
 def audit_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
     inventory = project_inventory(home)
     approved_by_key = {project_key(item["name"]): item["name"] for item in inventory["approved"]}
@@ -785,6 +1325,13 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--apply", action="store_true")
 
+    pickup = sub.add_parser("pickup-sources", help="list or read bounded sources for read-only Pickup")
+    pickup.add_argument("--project")
+    pickup.add_argument("--record-id", action="append", default=[])
+    pickup.add_argument("--limit", type=int, default=8)
+    pickup.add_argument("--include-content", action="store_true")
+    pickup.add_argument("--selection-token")
+
     audit = sub.add_parser("audit-sources", help="list source-attributed records for audit")
     audit.add_argument("--days", type=int, default=7)
 
@@ -798,7 +1345,10 @@ def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
     try:
-        home = resolve_home(args.home)
+        marker = upgrade_marker()
+        if marker.exists() or marker.is_symlink():
+            fail(f"Session Save upgrade or recovery is in progress: {marker}")
+        home = resolve_pickup_home(args.home) if args.command == "pickup-sources" else resolve_home(args.home)
         if args.command == "home":
             if args.init:
                 initialize_home(home)
@@ -843,6 +1393,8 @@ def main() -> int:
             else:
                 with mutation_lock(home):
                     result = migrate_v1(args, home)
+        elif args.command == "pickup-sources":
+            result = pickup_sources(args, home)
         elif args.command == "audit-sources":
             result = audit_sources(args, home)
         elif args.command == "write-audit":
@@ -853,7 +1405,7 @@ def main() -> int:
             return 2
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
-    except UserError as exc:
+    except (UserError, OSError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 2
 
