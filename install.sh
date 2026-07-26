@@ -942,7 +942,10 @@ except Exception as exc:
 
 if OPERATION == "install":
     kernel = (LIB / "session_save.py").resolve()
-    os.spawnv(os.P_WAIT, sys.executable, [sys.executable, str(kernel), "--home", str(HOME_DIR), "home", "--init"])
+    subprocess.run(
+        [sys.executable, str(kernel), "--home", str(HOME_DIR), "home", "--init"],
+        check=True, capture_output=True, text=True,
+    )
     migration_run = subprocess.run(
         [sys.executable, str(kernel), "--home", str(HOME_DIR), "migrate-v1", "--client", "claude", "--dry-run"],
         check=True, capture_output=True, text=True,

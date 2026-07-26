@@ -52,6 +52,7 @@ assert_file "$case_fresh/agents/skills/session-pickup/scripts/session_save.py"
 assert_absent "$case_fresh/agents/commands/st.md"
 assert_contains "$case_fresh/claude/skills/session-tag/CLIENT.md" '`client_id`: `claude`'
 assert_contains "$case_fresh/agents/skills/session-tag/CLIENT.md" '`client_id`: `codex`'
+assert_contains "$case_fresh/agents/skills/session-pickup/CLIENT.md" 'pickup-sources` is a client-neutral read command'
 [ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 37 ] || { echo "FAIL Claude manifest count"; exit 1; }
 [ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 24 ] || { echo "FAIL Codex manifest count"; exit 1; }
 ok "fresh install creates one shared kernel and exact thin Claude/Codex adapters"
@@ -562,6 +563,12 @@ ok "Pickup fails closed on symlinked roots, symlinked narratives, and oversized 
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Read these selected saved notes now?"
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "current AI provider"
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "exact narrative file"
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'never abbreviate a path with `...`'
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'Claims such as “no files referenced,” “no conflict,” “the sources agree,”'
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'Never cite a saved narrative as proof of current Pickup runtime behavior'
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'Never fill it with an uncited “no files referenced” claim'
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'host activation reads of the installed Pickup `SKILL.md`/`CLIENT.md`'
+assert_contains "$ROOT/skills/session-pickup/SKILL.md" 'Never infer the affected workspace from the process working directory'
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Do not open any returned path yourself"
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "grill me"
 assert_contains "$ROOT/skills/session-pickup/SKILL.md" "Continuing does not require immediate capture"

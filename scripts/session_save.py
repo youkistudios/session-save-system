@@ -1113,7 +1113,7 @@ def pickup_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
                 "latest_client_id": recent["record"]["client_id"] if recent else None,
             })
         project_rows.sort(key=lambda item: (item["latest_updated_at"] is not None, item["latest_updated_at"] or "", item["name"]), reverse=True)
-        return {"mode": "projects", "home": str(home), "projects": project_rows[:args.limit], "corrupt_records": public_errors, "corrupt_record_count": len(public_errors), "scanned_entries": scanned}
+        return {"mode": "projects", "home": str(home), "projects": project_rows[:args.limit], "corrupt_records": public_errors, "corrupt_record_count": len(public_errors)}
     key = project_key(args.project)
     if key not in by_key:
         fail(f"project is not approved: {safe_project(args.project)}; select or register it explicitly")
@@ -1129,7 +1129,7 @@ def pickup_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
             "updated_at": item["record"]["updated_at"],
             "path": str(item["path"]),
         } for item in candidates[:args.limit]]
-        return {"mode": "candidates", "home": str(home), "project": canonical, "candidates": rows, "corrupt_records": public_errors, "corrupt_record_count": len(public_errors), "scanned_entries": scanned}
+        return {"mode": "candidates", "home": str(home), "project": canonical, "candidates": rows, "corrupt_records": public_errors, "corrupt_record_count": len(public_errors)}
     if len(set(args.record_id)) != len(args.record_id):
         fail("duplicate --record-id values are not allowed")
     lookup = {item["record"]["record_id"]: item for item in candidates}
@@ -1207,7 +1207,7 @@ def pickup_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
         "home": str(home), "project": canonical, "selected": selected_rows,
         "selection_token": selection_token,
         "content_bytes": total, "content_limit": PICKUP_TOTAL_MAX,
-        "corrupt_records": public_errors, "corrupt_record_count": len(public_errors), "scanned_entries": scanned,
+        "corrupt_records": public_errors, "corrupt_record_count": len(public_errors),
     }
 
 

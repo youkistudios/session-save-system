@@ -46,9 +46,44 @@ Independent read-only implementation reviews reached:
 
 The alpha.5 kernel listed five approved production projects and 32 valid records through Pickup without changing source content. Before active installation, and again after installation, the complete frozen production-record hash set must equal the rollback baseline.
 
-## Live evidence boundary
+## Live Claude ↔ Codex evidence
 
-A real Codex Pickup journey may be recorded once the release candidate is installed. Claude → Codex and Codex → Claude witnesses remain required before claiming two-direction live continuity. If Claude access is quota-blocked, the limitation must remain explicit; isolated tests do not substitute for the live witness.
+Two real client directions passed on macOS against an isolated approved project named `Website Launch Pickup Witness`.
+
+### Claude → Codex
+
+1. A real Claude Code session `95aa1ec2-e257-4f03-909e-537aee37993b` created the Tag and immutable Checkpoint for record `ce6b9e06577c4a93b83fd060e5946ba9`.
+2. A second same-project Claude record contained unselected canaries, forcing real record selection.
+3. Fresh Codex thread `019f9d8e-4f53-7e43-99e3-02c9e3ee7bab` listed approved projects, then both saved sessions, without narrative content.
+4. Codex disclosed the exact Tag and Checkpoint paths and sizes.
+5. Refusing consent caused no content request.
+6. Fresh corrected Codex thread `019f9d9d-13dc-7a81-bcf3-6975d56fc606` used the exact selection token and produced a brief whose saved-work factual claims cited exact narrative paths.
+7. The referenced external-secret contents and unselected record canaries did not enter output; the reference path itself remained visible as intended.
+8. Codex asked for the missing affected workspace rather than inferring it, then stopped at the semantic-homepage-shell confirmation without editing or acting.
+9. Complete before/after tree manifests were byte-identical.
+
+### Codex → Claude
+
+1. A real Codex session created and checkpointed record `cdfb2d9ada344f808b20429156ef2f20` under the same approved project.
+2. A malformed same-project envelope was added as an adversarial fixture.
+3. Fresh Claude Code session `ac0c128c-dce6-46db-8e36-eda9c364cfba` disclosed two exact Codex narrative paths, reported one sanitized corrupt-record count, and waited for consent.
+4. Command-level stream evidence retained the exact selection-token content call and returned source narratives.
+5. Claude omitted the empty Files section, asked for the missing affected workspace rather than inferring it, and then stopped at an exact scoped action confirmation.
+6. External-secret contents did not enter output and the complete before/after tree manifests were byte-identical.
+
+The retained evidence bundle is:
+
+```text
+~/.local/state/session-save/evidence/20260726-pickup-live/
+```
+
+Its `SHA256SUMS` digest is:
+
+```text
+37d82aa0c0fe6b00bd4e9294d84271600a995e44d27d8b28f894f8ecbc329ce6
+```
+
+The witnesses prove user-confirmed cross-client Pickup, not automatic continuation lineage. No `continuation_of` value was created or changed.
 
 ## Exclusions
 

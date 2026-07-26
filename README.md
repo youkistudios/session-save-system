@@ -6,7 +6,7 @@
 
 [Open the site](https://youkistudios.github.io/session-save-system/) · [Read the usage guide](USAGE.md) · [See the architecture](docs/ARCHITECTURE.md) · [Review the safety model](docs/SAFETY-MODEL.md)
 
-> **Status: v2.0 alpha.5, tested local kernel.** Installer, recovery, migration, namespace, concurrency, index, audit-input, Pickup read boundaries, and uninstall behavior are exercised in isolated tests. Live end-to-end Pickup behavior remains a separate release witness; the two-direction Claude ↔ Codex gate depends on both clients being available.
+> **Status: v2.0 alpha.5, tested local kernel.** Installer, recovery, migration, namespace, concurrency, index, audit-input, Pickup read boundaries, and uninstall behavior are exercised in isolated tests. Real Claude → Codex and Codex → Claude Pickup journeys are witnessed on macOS with disclosure, refusal, consent-bound reads, exact citations, action confirmation, canary containment, and byte-identical before/after trees.
 
 ## The problem
 

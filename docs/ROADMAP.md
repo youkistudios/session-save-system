@@ -12,7 +12,7 @@
 
 ## Next — release witnesses
 
-- Complete clean end-to-end Tag, Checkpoint, Close, Review, and Pickup journeys in current Claude Code and Codex clients, including Claude → Codex and Codex → Claude Pickup.
+- Repeat the witnessed Claude → Codex and Codex → Claude Pickup journeys on a second POSIX environment, and complete fresh Close/Review lifecycle witnesses in both clients.
 - Publish a versioned capability matrix for session IDs, rename, archive, and history visibility.
 - Test installer/kernel behavior on a second POSIX environment.
 - Add golden content fixtures without turning narrative quality into a false deterministic claim.
