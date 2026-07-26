@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Session Save is a local session-memory architecture for Claude Code and Codex work.">
+  <meta name="description" content="Session Save keeps a local handover note for important Claude Code and Codex work, so you can pick up where you left off.">
   <meta name="theme-color" content="#071817">
-  <title>Session Save — local session memory you own</title>
+  <title>Session Save — pick up where you left off</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script>document.documentElement.classList.add('js')</script>
@@ -26,105 +26,105 @@
       <div class="hero-grid">
         <div>
           <p class="product-name">Session Save</p>
-          <h1>Session memory.<br><span>Owned by you.</span></h1>
+          <h1>Pick up where<br><span>you left off.</span></h1>
         </div>
         <div class="hero-detail">
-          <p>A local memory architecture that preserves captured context, decisions, progress, asset references, open questions, and resumption state across Claude Code and Codex.</p>
-          <p class="boundary">Resume the work—not the conversation. No account, collector, or proprietary database.</p>
+          <p>Session Save is a local session-memory system. It creates a handover record with the context, decisions, file references, open work, and next steps worth carrying into another session.</p>
+          <p class="boundary">In a new Claude or Codex session, run Pickup, choose the project and saved session, review the cited handover, and confirm where to continue. Session Save never watches every chat or loads memory automatically.</p>
         </div>
       </div>
 
       <div class="install-panel" aria-labelledby="install-title">
         <div>
           <span class="panel-index">INSTALL</span>
-          <h2 id="install-title">One local installer. Both clients.</h2>
+          <h2 id="install-title">One-time Terminal setup for both apps.</h2>
         </div>
         <div class="install-code">
           <code id="install-command">git clone https://github.com/youkistudios/session-save-system<br>cd session-save-system<br>./install.sh</code>
           <button type="button" class="copy-button" data-copy-target="install-command" data-state="idle" aria-label="Copy install command">Copy</button>
         </div>
       </div>
-      <p class="release-line"><b>v2.0.0-alpha.4</b> · 26 isolated tests · macOS witnessed · Linux verification pending · Python 3</p>
-      <p class="sync-note">“Local” means Session Save has no product uploader. Your chosen folder may still sync through iCloud, Obsidian Sync, Dropbox, Git, or software you configure.</p>
+      <p class="release-line"><b>v2.0.0-alpha.5</b> · requires Terminal + Python 3 · 41 automatic checks · installed on macOS · Linux testing is not finished</p>
+      <p class="sync-note">Not comfortable with Terminal? Ask a technical helper to do the one-time setup. Daily use is four deliberate workflow moments, plus Pickup when you need to resume. Session Save has no product cloud or background uploader, and it does not encrypt your notes. After disclosure and consent, Pickup sends only the selected notes to your active AI provider. Your folder may also sync through another service you configure.</p>
     </section>
 
     <section class="workflow section" id="workflow">
       <div class="section-intro">
-        <h2>Use the moment that matches the work.</h2>
-        <p>Tag names it. Checkpoint preserves the edge. Close banks the outcome. Review restores orientation. Continue is the result—not another ritual.</p>
+        <h2>Four simple ways to keep the work moving.</h2>
+        <p>Imagine Claude helps you plan a website today. Tomorrow, Codex helps build it. The saved handover gives you or the next AI a clear place to restart.</p>
       </div>
 
       <p class="console-caption">Illustrative local workflow · select a moment</p>
       <div class="workflow-console">
         <div class="workflow-tabs" role="tablist" aria-label="Session Save lifecycle">
-          <button type="button" role="tab" id="tab-tag" aria-controls="panel-tag" aria-selected="true" data-tab="tag"><span>01</span><b>Tag</b><small>name + route</small></button>
-          <button type="button" role="tab" id="tab-checkpoint" aria-controls="panel-checkpoint" aria-selected="false" tabindex="-1" data-tab="checkpoint"><span>02</span><b>Checkpoint</b><small>pause safely</small></button>
-          <button type="button" role="tab" id="tab-close" aria-controls="panel-close" aria-selected="false" tabindex="-1" data-tab="close"><span>03</span><b>Close</b><small>bank outcome</small></button>
-          <button type="button" role="tab" id="tab-review" aria-controls="panel-review" aria-selected="false" tabindex="-1" data-tab="review"><span>04</span><b>Review</b><small>orient across clients</small></button>
+          <button type="button" role="tab" id="tab-tag" aria-controls="panel-tag" aria-selected="true" data-tab="tag"><span>01</span><b>Tag</b><small>name the work</small></button>
+          <button type="button" role="tab" id="tab-checkpoint" aria-controls="panel-checkpoint" aria-selected="false" tabindex="-1" data-tab="checkpoint"><span>02</span><b>Checkpoint</b><small>save your place</small></button>
+          <button type="button" role="tab" id="tab-close" aria-controls="panel-close" aria-selected="false" tabindex="-1" data-tab="close"><span>03</span><b>Close</b><small>save the result</small></button>
+          <button type="button" role="tab" id="tab-review" aria-controls="panel-review" aria-selected="false" tabindex="-1" data-tab="review"><span>04</span><b>Review</b><small>see saved notes</small></button>
         </div>
 
         <div class="terminal" aria-label="Illustrative Session Save output">
           <section class="terminal-panel active" id="panel-tag" role="tabpanel" aria-labelledby="tab-tag" data-panel="tag">
-            <p class="intent">When a chat becomes meaningful, give it a durable address.</p>
+            <p class="intent">Give important work a clear name and project.</p>
             <pre><span class="prompt">claude ›</span> /session-tag
 
-<span class="ok">✓</span> project selected: Session Save
+<span class="ok">✓</span> project selected: Website Launch
 <span class="ok">✓</span> source: Claude · state: LIVE
-<span class="path">→ sessions/session-save/claude/…/tag.md</span></pre>
-            <p class="command-note"><code>$session-tag</code> in Codex. Project identity is selected or explicitly registered—never inferred from keywords.</p>
+<span class="path">→ sessions/website-launch/claude/…/tag.md</span></pre>
+            <p class="command-note">In Codex, use <code>$session-tag</code>. Session Save asks which project this belongs to. It does not guess.</p>
           </section>
           <section class="terminal-panel" id="panel-checkpoint" role="tabpanel" aria-labelledby="tab-checkpoint" data-panel="checkpoint">
-            <p class="intent">Before a break, context switch, or risky change, preserve the working edge.</p>
+            <p class="intent">Save a short note before you stop or switch tasks.</p>
             <pre><span class="prompt">claude ›</span> /session-checkpoint
 
-<span class="ok">✓</span> immutable checkpoint saved
+<span class="ok">✓</span> new checkpoint saved
     Now · Working on · Next · Watch
 <span class="path">→ checkpoints/20260726-….md</span></pre>
-            <p class="command-note"><code>$session-checkpoint</code> in Codex. Existing <code>session-save</code> and <code>/ss</code> remain supported.</p>
+            <p class="command-note">In Codex, use <code>$session-checkpoint</code>. The older <code>$session-save</code> still works. In Claude Code, <code>/ss</code> still works. Each checkpoint is a new note; older ones stay unchanged.</p>
           </section>
           <section class="terminal-panel" id="panel-close" role="tabpanel" aria-labelledby="tab-close" data-panel="close">
-            <p class="intent">When the meaningful work is finished, preserve both readable and technical state.</p>
+            <p class="intent">When the work is done, save the result and restart notes.</p>
             <pre><span class="prompt">claude ›</span> /session-close
 
-<span class="ok">✓</span> human summary written
-<span class="ok">✓</span> technical resume state written
+<span class="ok">✓</span> plain-English summary saved
+<span class="ok">✓</span> technical notes saved for later
 <span class="path">→ human.md · agent.md</span></pre>
-            <p class="command-note"><code>$session-close</code> in Codex. Existing <code>session-summary</code> and <code>/ssum</code> remain supported. Close requires an existing tagged record.</p>
+            <p class="command-note">In Codex, use <code>$session-close</code>. The older <code>$session-summary</code> still works. In Claude Code, <code>/ssum</code> still works. Tag the work before closing it.</p>
           </section>
           <section class="terminal-panel" id="panel-review" role="tabpanel" aria-labelledby="tab-review" data-panel="review">
-            <p class="intent">Before choosing what is next, review saved evidence without erasing its sources.</p>
+            <p class="intent">See recent saved notes from Claude and Codex in one place.</p>
             <pre><span class="prompt">codex ›</span> $session-review
 
-<span class="claude">[Claude]</span> research checkpoint
-<span class="codex">[Codex]</span> implementation close-out
+<span class="claude">[Claude]</span> website research notes
+<span class="codex">[Codex]</span> website build summary
 <span class="path">→ audits/global/2026-W30_audit.md</span></pre>
-            <p class="command-note"><code>/session-review</code> in a clean Claude install. Existing <code>session-audit</code> and <code>/sa</code> remain supported. Unregistered labels stay separate.</p>
+            <p class="command-note">In Claude Code, use <code>/session-review</code>. The older <code>/session-audit</code> and <code>/sa</code> still work. In Codex, use <code>$session-review</code> or the older <code>$session-audit</code>.</p>
           </section>
         </div>
       </div>
-      <p class="illustrative-note">Outputs are abbreviated illustrations of merged behavior; printed receipts contain real local paths.</p>
+      <p class="illustrative-note">This is a shortened example. Session Save prints the real local path after each save. Pickup reads only the exact bounded notes you approve and cites their real paths.</p>
     </section>
 
     <section class="first-use" aria-labelledby="first-use-title">
-      <div><h2 id="first-use-title">The only sequence to remember.</h2></div>
+      <div><span class="panel-index">RESUME SAVED WORK</span><h2 id="first-use-title">Use Pickup in a fresh session.</h2></div>
       <ol>
-        <li><b>Install</b><span>Choose the default home or configure another local folder.</span></li>
-        <li><b>Tag meaningful work</b><span>Select an approved project. Confirm before registering a new one.</span></li>
-        <li><b>Checkpoint when pausing</b><span>If Checkpoint comes first, it creates one provisional record—not a guessed verdict.</span></li>
+        <li><b>Run Pickup</b><span><code>/session-pickup</code> in Claude Code or <code>$session-pickup</code> in Codex.</span></li>
+        <li><b>Choose the handover</b><span>Select the exact project and, when needed, the saved Claude or Codex session.</span></li>
+        <li><b>Review, then continue</b><span>Approve the listed notes, read the cited brief, and confirm one bounded next step.</span></li>
       </ol>
     </section>
 
     <section class="files section" id="files">
       <div class="section-intro compact">
-        <h2>A normal folder is the memory boundary.</h2>
-        <p>Markdown carries captured context. JSON carries machine identity. Generated views can be rebuilt from source memory records.</p>
+        <h2>Your memory is a folder you can open.</h2>
+        <p>Session Save writes notes you can read in a normal text editor. Small organizing files tell it where each note belongs.</p>
       </div>
       <div class="files-grid">
         <pre class="file-tree" aria-label="Session Save folder structure"><b>session-logs/</b>
-├── <mark>_INDEX.md</mark>              generated view
-├── GUIDE.md               shared rulebook
+├── <mark>_INDEX.md</mark>              list made from saved notes
+├── GUIDE.md               shared instructions
 ├── sessions/
-│   ├── _PROJECTS.md       approved identity
+│   ├── _PROJECTS.md       your project list
 │   └── session-save/
 │       ├── <b>claude/</b>&lt;date&gt;_&lt;slug&gt;/
 │       │   ├── record.json
@@ -133,43 +133,46 @@
 ├── events/
 └── audits/global/</pre>
         <dl class="file-rules">
-          <div><dt>Separate writers</dt><dd>Claude and Codex never write the same source directory.</dd></div>
-          <div><dt>Explicit projects</dt><dd>Case-only migrated labels can map safely; punctuation, tags, and semantic similarity cannot.</dd></div>
-          <div><dt>Rebuildable views</dt><dd>The index and review are projections. Source records remain authoritative evidence.</dd></div>
-          <div><dt>Memory, not a transcript dump</dt><dd>Context, decisions, progress, asset paths, open questions, and next state—captured deliberately.</dd></div>
+          <div><dt>One folder, both apps</dt><dd>Claude and Codex keep separate notes inside the same project folder.</dd></div>
+          <div><dt>You choose the project</dt><dd>Session Save does not join projects because their names or topics look similar.</dd></div>
+          <div><dt>Easy to inspect</dt><dd>Open, copy, search, or back up the notes with normal file tools.</dd></div>
+          <div><dt>A useful handover</dt><dd>Save what happened, which files matter, what remains open, and what to do next.</dd></div>
         </dl>
       </div>
     </section>
 
     <section class="proof section" id="proof">
       <div class="section-intro compact">
-        <span class="panel-index">EVIDENCE BOUNDARY</span>
-        <h2>Claims stop where the witness stops.</h2>
+        <span class="panel-index">WHAT IS READY</span>
+        <h2>What works now—and what is still being tested.</h2>
       </div>
-      <div class="evidence-table" role="table" aria-label="Session Save evidence boundary">
-        <div role="row"><b role="cell">Verified now</b><p role="cell">A local session-memory architecture with one installed kernel; Claude/Codex source separation; atomic writes; immutable checkpoints; explicit project identity; copy-first migration; manifest-owned uninstall; additive lifecycle skills.</p></div>
-        <div role="row"><b role="cell">Current proof</b><p role="cell">26 isolated tests, repository validation, production installation on macOS, and byte-identical verification of 32 pre-existing records.</p></div>
-        <div role="row"><b role="cell">Still pending</b><p role="cell">A complete live four-moment journey in both current clients, second-POSIX verification, Windows, and additional agent adapters.</p></div>
-        <div role="row"><b role="cell">Not included</b><p role="cell">Transcript harvesting, semantic project clustering, automatic stage inference, master-plan mutation, telemetry, hosted sync, or background collection.</p></div>
+      <div class="evidence-table" role="table" aria-label="What Session Save can do today">
+        <div role="row"><b role="cell">Built and tested</b><p role="cell">Claude and Codex notes stay separate, checkpoints leave old notes unchanged, projects require your exact choice, and Pickup returns only the selected bounded handover after consent. Install, crash recovery, migration, and uninstall are also tested.</p></div>
+        <div role="row"><b role="cell">How we checked it</b><p role="cell">The 41-check suite covers local writes, project safety, read-only Pickup, changed-note rejection, malicious-file boundaries, installer recovery, and record preservation. Important implementation claims have independent security review.</p></div>
+        <div role="row"><b role="cell">Live client proof</b><p role="cell">Real Claude-to-Codex and Codex-to-Claude Pickup journeys passed on macOS: exact project and session selection, refusal before reading, cross-client disclosure, cited briefs, a missing-workspace question, and confirmation before action. Both Session Save trees stayed byte-identical.</p></div>
+        <div role="row"><b role="cell">Still pending</b><p role="cell">A second POSIX computer, Windows, more AI apps, and fresh Close/Review witnesses in both clients. These remain separate from automatic kernel proof.</p></div>
+        <div role="row"><b role="cell">Not part of the product</b><p role="cell">Recording every chat, guessing which projects belong together, deciding project stages, changing your master plan, tracking you, or uploading notes to a Session Save cloud.</p></div>
       </div>
       <div class="proof-links"><a href="https://github.com/youkistudios/session-save-system/blob/main/docs/SAFETY-MODEL.md">Safety model</a><a href="https://github.com/youkistudios/session-save-system/blob/main/docs/ARCHITECTURE.md">Architecture</a><a href="https://github.com/youkistudios/session-save-system/blob/main/docs/evidence/">Evidence</a></div>
     </section>
 
     <section class="questions section" id="questions">
-      <div class="section-intro compact"><h2>Five direct answers.</h2></div>
+      <div class="section-intro compact"><h2>Seven clear answers.</h2></div>
       <div class="question-list">
-        <details><summary>What does “session memory” mean here?</summary><p>It is durable, deliberate memory for work between sessions: captured context, decisions, progress, artifact references, unresolved questions, and resumption state. It is not automatic transcript harvesting.</p></details>
-        <details><summary>Does Session Save upload or read hidden transcripts?</summary><p>No. Capture is deliberate and user-invoked. Session Save writes context available in the current client to local files; it has no product uploader or background transcript collector.</p></details>
-        <details><summary>Can I choose where records live?</summary><p>Yes. The default is <code>~/Desktop/session-logs/</code>, and the installer accepts another local home. Existing homes never move automatically.</p></details>
-        <details><summary>Were the old skill names removed?</summary><p>No. <code>session-checkpoint</code>, <code>session-close</code>, and <code>session-review</code> are additive wrappers. <code>session-save</code>, <code>session-summary</code>, <code>session-audit</code>, and their short aliases remain installed.</p></details>
-        <details><summary>Does Review decide project truth?</summary><p>No. It groups only approved deterministic project identities, cites each source, exposes contradictions, and leaves unknown labels separate. It cannot update a master plan.</p></details>
+        <details><summary>What does Session Save remember?</summary><p>It can remember what happened, what you decided, where the work stopped, which files matter, what remains open, and what should happen next. It saves file names and paths, but it does not copy every referenced file into the memory folder.</p></details>
+        <details><summary>How do I pick up in another app?</summary><p>Run <code>/session-pickup</code> in Claude Code or <code>$session-pickup</code> in Codex. Choose the exact project and saved session. Pickup shows which notes it would read, warns when they came from another AI client, and waits for consent. It then gives you a cited handover and asks before acting. This is user-confirmed resumption, not automatic continuation.</p></details>
+        <details><summary>Does it record every chat?</summary><p>No. You decide when to Tag, Checkpoint, or Close. Session Save does not secretly read old chats or run a background recorder.</p></details>
+        <details><summary>Where are my notes kept?</summary><p>The normal folder is <code>~/Desktop/session-logs/</code>. You can choose another folder before installing. Session Save never moves an existing memory folder without asking.</p></details>
+        <details><summary>Which command names should I use?</summary><p>Use <code>session-checkpoint</code>, <code>session-close</code>, <code>session-review</code>, and <code>session-pickup</code>. Older save, summary, audit, and short names still work. If another Claude command already uses the same name, Session Save leaves it alone and keeps its skill available through the Skills menu.</p></details>
+        <details><summary>Can it mix up two projects?</summary><p>Session Save only joins notes when you choose the same saved project. Similar words or topics are not enough. Unknown project names stay separate for you to review.</p></details>
+        <details><summary>Can I trust every saved summary?</summary><p>Treat it like any AI-written note: check important details. Session Save keeps the note and its source, but it cannot guarantee that an AI summary is complete or correct.</p></details>
       </div>
     </section>
   </main>
 
   <footer>
-    <div><a class="wordmark" href="#top">SESSION//SAVE</a><p>Local continuity for AI-assisted work.</p></div>
-    <div class="footer-meta"><p>v2.0.0-alpha.4 · MIT</p><a href="https://github.com/youkistudios/session-save-system">Install from GitHub ↗</a></div>
+    <div><a class="wordmark" href="#top">SESSION//SAVE</a><p>A local handover note for important AI work.</p></div>
+    <div class="footer-meta"><p>v2.0.0-alpha.5 · MIT</p><a href="https://github.com/youkistudios/session-save-system">Install from GitHub ↗</a></div>
   </footer>
   <div class="sr-only" role="status" aria-live="polite" id="copy-status"></div>
   <script src="site.js" defer></script>
