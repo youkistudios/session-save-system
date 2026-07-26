@@ -111,7 +111,7 @@ h1 span { color: var(--mint); }
 .workflow-console { display: grid; grid-template-columns: 270px minmax(0, 1fr); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .workflow-tabs { display: none; background: var(--ink-soft); border-right: 1px solid var(--line); }
 .js .workflow-tabs { display: flex; flex-direction: column; }
-.workflow-tabs button { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; min-height: 94px; padding: 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text-soft); text-align: left; cursor: pointer; }
+.workflow-tabs button { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; min-height: 76px; padding: 12px 18px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text-soft); text-align: left; cursor: pointer; }
 .workflow-tabs button:last-child { border-bottom: 0; }
 .workflow-tabs button span { grid-row: 1 / span 2; color: var(--text-dim); font: 12px var(--mono); }
 .workflow-tabs button b { font-size: 18px; }
@@ -201,7 +201,7 @@ footer p { margin: 9px 0 0; }
   .js .workflow-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
   .workflow-tabs button { min-width: 0; min-height: 76px; padding: 12px 9px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); grid-template-columns: 24px 1fr; }
   .workflow-tabs button:nth-child(even) { border-right: 0; }
-  .workflow-tabs button:nth-last-child(-n+2) { border-bottom: 0; }
+  .workflow-tabs button:last-child { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
   .workflow-tabs button small { display: none; }
   .terminal-top { display: block; }
   .terminal-top b { display: block; margin-top: 4px; }

@@ -130,7 +130,7 @@ for phrase in ("One record per client session", "never edit directly", "Claude C
         fail(f"shared rulebook contract missing: {phrase}")
 
 html = (ROOT / "docs/index.html").read_text()
-for token in ('name="viewport"', 'href="styles.css"', 'id="main"', "CLAUDE CODE + CODEX", "/session-pickup", "$session-pickup", "v2.0.0-alpha.5", "41 automatic checks", "Live client proof"):
+for token in ('name="viewport"', 'href="styles.css"', 'id="main"', "CLAUDE CODE + CODEX", "/session-pickup", "$session-pickup", 'id="tab-pickup"', 'id="panel-pickup"', "v2.0.0-alpha.5", "41 automatic checks", "Live client proof"):
     if token not in html:
         fail(f"site missing {token}")
 
