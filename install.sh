@@ -272,9 +272,6 @@ install_client() {
     can_install_managed "$REPO_DIR/skills/$alias/SKILL.md" "skills/$alias/SKILL.md" || alias_ready=false
     can_install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$alias/CLIENT.md" || alias_ready=false
     can_install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$alias/scripts/session_save.py" || alias_ready=false
-    if [ "$client" = "claude" ]; then
-      can_install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md" || alias_ready=false
-    fi
     if [ "$alias_ready" != true ]; then
       echo "  skipped $client alias $alias — complete managed alias unit is unavailable"
       continue
@@ -283,7 +280,11 @@ install_client() {
     install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$alias/CLIENT.md" "$alias adapter"
     install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$alias/scripts/session_save.py" "$alias kernel launcher"
     if [ "$client" = "claude" ]; then
-      install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md" "command /$alias"
+      if can_install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md"; then
+        install_managed "$REPO_DIR/commands/$alias.md" "commands/$alias.md" "command /$alias"
+      else
+        echo "  skipped $client command /$alias — unrelated command exists; alias skill remains available"
+      fi
     fi
   done
 

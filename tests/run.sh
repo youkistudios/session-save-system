@@ -99,7 +99,18 @@ assert_absent "$case_alias_component/claude/commands/session-checkpoint.md"
 if awk -F '\t' '$2 ~ /session-checkpoint/ { found=1 } END { exit found ? 0 : 1 }' "$case_alias_component/claude/session-save-system.manifest"; then
   echo "FAIL partial alias unit entered ownership manifest"; exit 1
 fi
-ok "unrelated client files are skipped and alias installation is dependency-atomic"
+case_alias_command=$TEST_ROOT/alias-command-collision
+mkdir -p "$case_alias_command/home" "$case_alias_command/claude/commands" "$case_alias_command/agents" "$case_alias_command/config"
+printf '%s\n' 'unrelated close command' > "$case_alias_command/claude/commands/session-close.md"
+HOME="$case_alias_command/home" CLAUDE_CONFIG_DIR="$case_alias_command/claude" AGENTS_CONFIG_DIR="$case_alias_command/agents" SESSION_SAVE_CONFIG="$case_alias_command/config/config.json" SESSION_SAVE_HOME="$case_alias_command/logs" "$ROOT/install.sh" >/dev/null
+assert_file "$case_alias_command/claude/skills/session-close/SKILL.md"
+assert_file "$case_alias_command/claude/skills/session-close/CLIENT.md"
+assert_file "$case_alias_command/claude/skills/session-close/scripts/session_save.py"
+assert_contains "$case_alias_command/claude/commands/session-close.md" 'unrelated close command'
+if awk -F '\t' '$2 == "commands/session-close.md" { found=1 } END { exit found ? 0 : 1 }' "$case_alias_command/claude/session-save-system.manifest"; then
+  echo "FAIL unrelated alias command was claimed"; exit 1
+fi
+ok "unrelated client files are skipped and alias skill installation is dependency-atomic"
 
 case_backup=$TEST_ROOT/backup
 install_case "$case_backup"
