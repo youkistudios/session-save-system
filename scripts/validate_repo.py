@@ -17,6 +17,8 @@ REQUIRED = [
     "docs/PRODUCT-THESIS.md", "docs/ARCHITECTURE.md", "docs/SAFETY-MODEL.md",
     "docs/ROADMAP.md", "docs/decisions/0003-client-neutral-shared-home.md",
     "docs/decisions/0004-one-installed-kernel.md",
+    "docs/decisions/0005-deterministic-approved-projects.md",
+    "docs/evidence/2026-07-26-deterministic-project-safety.md",
     "adapters/claude/CLIENT.md", "adapters/codex/CLIENT.md",
     "provenance/COMPONENTS.json", "automation/workflows/ci.yml",
     "automation/workflows/pages.yml",
@@ -58,7 +60,8 @@ for phrase in ("SESSION_SAVE_KERNEL", "SESSION_SAVE_LIB_DIR", "os.execv", "is_sy
 for phrase in (
     "fcntl.flock", "mutation_lock", "atomic_text", "safe_under", "record_id", "client_id",
     "checkpoint-path", "rebuild_index", "migrate-v1", "source_records_preserved",
-    "write-audit",
+    "write-audit", "project-list", "project-check", "project-register",
+    "require_registered_project",
 ):
     if phrase not in kernel:
         fail(f"persistence mechanism missing: {phrase}")

@@ -11,7 +11,7 @@ Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file f
 
 1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>`. Stop unless `ok` is true and `migration_required` is zero.
 2. Locate the current record with `locate --client <client_id> --session-id <id>` when a real stable host ID exists, otherwise `locate --client <client_id> --slug <known-slug>`.
-3. If no record exists, resolve project and name as the guide requires, then run `begin --client <client_id> --project <project> --name <name> --status provisional --gist "Checkpoint saved; run session-tag to tag this session."`. Never invent a verdict. This is the single provisional record.
+3. If no record exists, run `project-list` and resolve one exact approved project. Ask on ambiguity; never infer identity from tags or similar keywords. Register a genuinely new project only after explicit confirmation. Then run `begin --client <client_id> --project <project> --name <name> --status provisional --gist "Checkpoint saved; run session-tag to tag this session." --require-registered-project`. Never invent a verdict or an unconfirmed project. This is the single provisional record.
 4. Run `checkpoint-path --client <client_id> --record <record>` and write one Markdown checkpoint to the returned unique path. Use `### <HH:MM> — <client_id>` followed by **Now**, **Working on**, **Next**, and **Watch**. Keep it approximately 100–300 words.
 5. Run `sync --client <client_id> --record <record> --operation checkpoint-written`. Do not change an existing open record back to provisional.
 6. Print the compact checkpoint receipt with the client label and real path.

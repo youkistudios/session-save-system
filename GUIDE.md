@@ -50,16 +50,19 @@ A client directory appears only after that client writes its first record for a 
 - A Cursor session running Claude would not be a Claude Code record; client and model are different concepts.
 - Never claim client identity from prose. The installed `CLIENT.md` adapter supplies it.
 
-## Projects — discovered, never hardcoded
+## Projects — explicitly approved, never inferred
 
-A project is whatever the user actually works on.
+A project is whatever the user explicitly approves—not whatever shares keywords, tags, files, or themes.
 
-1. Check `sessions/_PROJECTS.md` for a match.
-2. Otherwise derive a candidate from repository/folder, deliverable, then dominant topic.
-3. Propose the candidate and nearby existing projects. Never silently invent one when the user can answer.
-4. Register an approved project with a one-line description and first date.
+1. Run `project-list` and use the approved canonical project name when the user’s choice is clear. The kernel tolerates letter-case differences for migrated records, but never punctuation, word, tag, or thematic similarity.
+2. On ambiguity, show nearby approved choices and ask. Similar words are never identity proof.
+3. For a genuinely new project, propose one short name and wait for explicit confirmation.
+4. Run `project-register --project <name> --description <description>` only after confirmation.
+5. Run `begin ... --require-registered-project` for normal Tag and first-Checkpoint creation.
 
-Project display names remain short. The kernel creates a safe lowercase folder slug. Cross-client work uses the same project display name so audits can aggregate it.
+Registration creates no project content folder; the first approved record does. Audit may report unregistered historical labels but cannot register, alias, merge, move, or create projects. Exact approved identity—not semantic similarity—allows Claude and Codex records to aggregate.
+
+A user-approved exact workspace-root mapping may later reduce repeated questions, but content pattern detection, automatic stage inference, and automatic master-plan updates are outside Session Save.
 
 ## Naming
 
@@ -171,11 +174,11 @@ Write approximately 100–300 words to the unique checkpoint path allocated by t
 - **Watch:** …
 ```
 
-If Save runs first, create one provisional record with gist:
+If Save runs first, resolve an exact approved project before creating one provisional record with gist:
 
 `Checkpoint saved; run session-tag to tag this session.`
 
-A later tag upgrades that same client record. An open record stays open after more checkpoints. Never write a close-out here.
+Use `project-list`; ask on ambiguity; register a new project only after explicit confirmation. Never guess from keywords or create an “unconfirmed” project folder. A later tag upgrades that same client record. An open record stays open after more checkpoints. Never write a close-out here.
 
 ## session-summary — close-out
 
@@ -190,14 +193,16 @@ Refresh these files on rerun and append revision timestamps. Then use the kernel
 
 Default window is seven days. Gather sources through the kernel, then read `record.json`, `tag.md`, and `human.md` only—never raw transcripts.
 
-Group by project first. Within each project include:
+Group by the returned `approved_project` canonical name only. Letter-case variants may map to that canonical identity; never merge from punctuation changes, keywords, aliases not explicitly registered, similar titles, or semantic resemblance. Put unregistered labels in a separate review section and state that no merge was performed. Audit cannot create projects or update a master plan.
+
+Within each approved project include:
 
 - Achieved
 - Open plans not actioned
 - High-value assets
 - Live threads and pending decisions
 
-Prefix factual bullets with `[Claude]`, `[Codex]`, or the returned client ID and link the record path. Surface contradictions between client records instead of silently reconciling them. Name close-out debt. Add cross-project dependencies and prioritized next moves.
+Prefix factual bullets with `[Claude]`, `[Codex]`, or the returned client ID and link the record path. Surface contradictions between client records instead of silently reconciling them. Name close-out debt. Add cross-project dependencies and prioritized next moves. Use **Verified outcome**, **Reported progress**, and **Open / unresolved** rather than inventing lifecycle stages.
 
 Publish the weekly report atomically through the kernel to `audits/global/<YYYY>-W<week>_audit.md`. A client-specific audit may be added later, but the default is the combined project view.
 

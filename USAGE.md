@@ -20,6 +20,12 @@ End of week ─────────► Audit      combine Claude + Codex by 
 
 If you remember one moment, use **Tag** when finishing a meaningful chat.
 
+## Choose the project explicitly
+
+Tag and the first Checkpoint list user-approved projects. Select an exact existing name, or explicitly confirm a genuinely new project before Session Save registers it. Similar tags, filenames, repositories, and topic words never create or merge projects.
+
+Registration creates no content folder. The first approved record does. Historical unregistered labels remain separate in Audit until the user deliberately resolves them.
+
 ## Tag — the router
 
 Tag names the session for what it exists to produce, records its client and assets, judges FINISHED/LIVE/STALE, and routes to Save or Summarize. If the client exposes rename/archive controls, it asks before using them. Otherwise it prints a manual action.

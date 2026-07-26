@@ -6,6 +6,7 @@
 - Maintain one shared home with client-separated source records.
 - Prove atomic concurrent writes, rebuildable indexes, global audits, safe migration, and proof-based uninstall.
 - Keep live-host evidence distinct from isolated kernel evidence.
+- Require exact approved project identity in normal capture flows; report unregistered historical labels without semantic merging.
 
 ## Next — release witnesses
 
@@ -19,7 +20,8 @@
 - Evaluate Windows locking, paths, and installation.
 - Consider another client adapter only when it can pass the existing conformance suite without a schema fork.
 - Explore explicit cross-client continuation links while preserving separate source records.
+- Consider exact user-approved workspace-to-project mappings only if repeated prompts prove burdensome.
 
 ## Not planned
 
-Background transcript collection, automatic cross-client title merging, destructive chat cleanup, hosted accounts, telemetry, automatic publishing, model rankings, and a proprietary record format remain outside the thesis.
+Background transcript collection, semantic project clustering, automatic project/alias creation, automatic lifecycle-stage inference, master-plan mutation, automatic cross-client title merging, destructive chat cleanup, hosted accounts, telemetry, automatic publishing, model rankings, and a proprietary record format remain outside the thesis.

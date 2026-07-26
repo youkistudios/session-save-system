@@ -48,7 +48,7 @@ session-logs/
 └── audits/global/<week>_audit.md
 ```
 
-A client directory appears lazily on its first save. Project views aggregate Claude and Codex while the `client_id` remains present in every envelope, index row, and audit claim.
+A client directory appears lazily on its first save. Project views aggregate Claude and Codex only under an exact user-approved project name, while the `client_id` remains present in every envelope, index row, and audit claim. Similar tags or keywords never create or merge projects.
 
 ## Install
 
@@ -121,14 +121,15 @@ python3 scripts/generate_manifest.py
 python3 scripts/validate_repo.py
 ```
 
-The 23-test suite currently covers one-kernel installation, thin launchers, shared/client ownership collisions, recoverable updates, partial and proof-based uninstall, isolated namespaces, immutable checkpoints, 24 simultaneous writes, copy-first migration, global audits, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
+The 25-test suite currently covers one-kernel installation, thin launchers, deterministic approved-project safety, audit non-mutation, shared/client ownership collisions, recoverable updates, partial and proof-based uninstall, isolated namespaces, uniquely named checkpoints, 24 simultaneous writes, copy-first migration, global audits, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
 
 ## Safety contract
 
 - **One home, namespaced writers.** Claude and Codex never share a source record directory.
 - **Project first, provenance always.** Global views aggregate without erasing the client.
 - **Derived index.** `_INDEX.md` can be rebuilt from source envelopes.
-- **No silent merging.** Similar titles are not identity proof.
+- **No silent merging.** Similar titles, tags, keywords, and files are not project identity proof.
+- **No automatic project plans.** Audit reports cited evidence; it cannot create projects, invent stages, or update a master plan.
 - **Archive, never delete. Capture before archive.**
 - **Prove before uninstall.** Only hash-matching managed adapter files are removed.
 - **Records are user data.** Shared config, logs, migrations, and backups are outside uninstall scope.
