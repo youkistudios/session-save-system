@@ -62,7 +62,7 @@ cd session-save-system
 
 The default installs both adapters:
 
-- Claude Code → `~/.claude/skills/` plus lifecycle and compatibility slash commands;
+- Claude Code → `~/.claude/skills/` plus lifecycle and compatibility slash commands; an unrelated existing command is preserved and the corresponding skill remains available through Skills;
 - Codex → `~/.agents/skills/`;
 - one canonical kernel → `~/.local/share/session-save/session_save.py`;
 - shared config → `~/.config/session-save/config.json`;

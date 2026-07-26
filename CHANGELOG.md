@@ -7,6 +7,7 @@ All notable changes to Session Save System are documented here.
 - Add the clearer `session-checkpoint`, `session-close`, and `session-review` lifecycle skills and Claude slash commands.
 - Retain the canonical `session-save`, `session-summary`, and `session-audit` implementations plus all short aliases unchanged.
 - Keep each new name as a thin adapter to the existing canonical behavior rather than forking the kernel or schema.
+- Install alias skill components atomically; preserve unrelated command collisions without withholding the complete skill.
 - Present Tag · Checkpoint · Close · Review consistently in installation and usage guidance.
 
 ## 2.0.0-alpha.3 — 2026-07-26
