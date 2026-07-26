@@ -110,6 +110,121 @@ assert_contains "$case_records/logs/_INDEX.md" '`claude`'
 assert_contains "$case_records/logs/_INDEX.md" '`codex`'
 ok "Claude and Codex records remain separated under one project"
 
+case_audit_fresh=$TEST_ROOT/audit-fresh
+fresh_audit=$(python3 "$KERNEL" --home "$case_audit_fresh/logs" audit-sources --days 7)
+[ "$(printf '%s' "$fresh_audit" | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')" = 0 ] || { echo "FAIL fresh audit source count"; exit 1; }
+assert_absent "$case_audit_fresh/logs"
+
+case_projects=$TEST_ROOT/project-safety
+project_list=$(python3 "$KERNEL" --home "$case_projects/logs" project-list)
+[ "$(printf '%s' "$project_list" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["approved"]))')" = 0 ] || { echo "FAIL fresh project registry not empty"; exit 1; }
+if python3 "$KERNEL" --home "$case_projects/logs" begin --client claude --project "Website Alpha" --name "Website Alpha Research" --require-registered-project >/dev/null 2>&1; then
+  echo "FAIL strict begin accepted an unapproved project"; exit 1
+fi
+assert_absent "$case_projects/logs/sessions/website-alpha"
+registered=$(python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Website Alpha" --description "First unrelated website")
+receipt=$(printf '%s' "$registered" | python3 -c 'import json,sys; print(json.load(sys.stdin)["receipt"])')
+assert_file "$receipt"
+assert_absent "$case_projects/logs/sessions/website-alpha"
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Website Beta" --description "Second unrelated website" >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" begin --client claude --project "Website Alpha" --name "Website Alpha Research" --require-registered-project >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" begin --client codex --project "Website Beta" --name "Website Beta Build" --require-registered-project >/dev/null
+assert_dir "$case_projects/logs/sessions/website-alpha/claude"
+assert_dir "$case_projects/logs/sessions/website-beta/codex"
+python3 "$KERNEL" --home "$case_projects/logs" project-check --project "website alpha" >/dev/null
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Website-Alpha" >/dev/null 2>&1; then
+  echo "FAIL punctuation-normalized project identity was matched approximately"; exit 1
+fi
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Slug Collision" >/dev/null
+if python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Slug-Collision" >/dev/null 2>&1; then
+  echo "FAIL colliding project folder slug accepted"; exit 1
+fi
+if python3 "$KERNEL" --home "$case_projects/logs" begin --client codex --project "Slug-Collision" --name "Slug Collision Bypass" >/dev/null 2>&1; then
+  echo "FAIL non-strict begin bypassed approved project slug ownership"; exit 1
+fi
+non_ascii=$(python3 "$KERNEL" --home "$case_projects/logs" project-register --project "東京" --description "Non-ASCII project")
+non_ascii_slug=$(printf '%s' "$non_ascii" | python3 -c 'import json,sys; print(json.load(sys.stdin)["project"]["slug"])')
+[ "$non_ascii_slug" = "$(python3 "$KERNEL" --home "$case_projects/logs" project-check --project "東京" | python3 -c 'import json,sys; print(json.load(sys.stdin)["project"]["slug"])')" ] || { echo "FAIL non-ASCII project slug changed"; exit 1; }
+python3 "$KERNEL" --home "$case_projects/logs" begin --client claude --project "東京" --name "東京 Research" --require-registered-project >/dev/null
+assert_dir "$case_projects/logs/sessions/$non_ascii_slug/claude"
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Project * Legacy" >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Project * Legacy" >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Unicode-Alpha" >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" project-check --project "unicode-alpha" >/dev/null
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Unicode－Alpha" >/dev/null 2>&1; then
+  echo "FAIL compatibility punctuation was normalized into project identity"; exit 1
+fi
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Project 1" >/dev/null
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Project ¹" >/dev/null 2>&1; then
+  echo "FAIL compatibility numeral was normalized into project identity"; exit 1
+fi
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "Straße" >/dev/null
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "STRASSE" >/dev/null 2>&1; then
+  echo "FAIL case folding expanded project identity"; exit 1
+fi
+python3 "$KERNEL" --home "$case_projects/logs" project-register --project "CASE PROJECT" >/dev/null
+python3 "$KERNEL" --home "$case_projects/logs" begin --client codex --project "Case Project" --name "Case Project Work" --session-id case-project-session >/dev/null
+case_reused=$(python3 "$KERNEL" --home "$case_projects/logs" begin --client codex --project "CASE PROJECT" --name "Case Project Work" --session-id case-project-session --require-registered-project)
+[ "$(printf '%s' "$case_reused" | python3 -c 'import json,sys; print(json.load(sys.stdin)["record"]["project"])')" = "Case Project" ] || { echo "FAIL existing case-only project label was rewritten"; exit 1; }
+case_audit=$(python3 "$KERNEL" --home "$case_projects/logs" audit-sources --days 7)
+[ "$(printf '%s' "$case_audit" | python3 -c 'import json,sys; print(next(x["approved_project"] for x in json.load(sys.stdin)["sources"] if x["record"]["provider_session_id"]=="case-project-session"))')" = "CASE PROJECT" ] || { echo "FAIL audit did not return canonical approved project"; exit 1; }
+cat >> "$case_projects/logs/sessions/_PROJECTS.md" <<'EOF'
+```
+- **Example Project** — documentation only
+```
+```markdown
+~~~
+- **Mixed Fence Project** — still inside the backtick fence
+```
+  ```markdown
+- **Indented Fence Project** — still inside the indented fence
+  ```
+EOF
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Example Project" >/dev/null 2>&1; then
+  echo "FAIL fenced Markdown example became an approved project"; exit 1
+fi
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Mixed Fence Project" >/dev/null 2>&1; then
+  echo "FAIL mismatched Markdown fence bypassed project approval"; exit 1
+fi
+if python3 "$KERNEL" --home "$case_projects/logs" project-check --project "Indented Fence Project" >/dev/null 2>&1; then
+  echo "FAIL indented Markdown fence bypassed project approval"; exit 1
+fi
+python3 "$KERNEL" --home "$case_projects/legacy-logs" begin --client claude --project "Legacy [Website] | Notes" --name "Legacy Notes" >/dev/null
+assert_dir "$case_projects/legacy-logs/sessions/legacy-website-notes/claude"
+case_migrated=$TEST_ROOT/project-migrated-case
+python3 "$KERNEL" --home "$case_migrated/logs" begin --client claude --project "Case Project" --name "Case Project Existing" --session-id migrated-case >/dev/null
+python3 "$KERNEL" --home "$case_migrated/logs" project-register --project "CASE PROJECT" >/dev/null
+migrated_inventory=$(python3 "$KERNEL" --home "$case_migrated/logs" project-list)
+[ "$(printf '%s' "$migrated_inventory" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["observed_unregistered"]))')" = 0 ] || { echo "FAIL historical case-only record remained unregistered"; exit 1; }
+python3 "$KERNEL" --home "$case_migrated/logs" begin --client claude --project "CASE PROJECT" --name "Case Project Existing" --session-id migrated-case --require-registered-project >/dev/null
+[ "$(find "$case_migrated/logs/sessions/case-project/claude" -name record.json -type f | wc -l | tr -d ' ')" = 1 ] || { echo "FAIL historical case-only record duplicated"; exit 1; }
+
+case_unclosed=$TEST_ROOT/project-unclosed-fence
+python3 "$KERNEL" --home "$case_unclosed/logs" project-register --project "Approved Before Fence" >/dev/null
+printf '%s\n' '```markdown' '- **Example Only** — unclosed documentation block' >> "$case_unclosed/logs/sessions/_PROJECTS.md"
+unclosed_before=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$case_unclosed/logs/sessions/_PROJECTS.md")
+receipts_before=$(find "$case_unclosed/logs/.session-save/project-receipts" -type f | wc -l | tr -d ' ')
+if python3 "$KERNEL" --home "$case_unclosed/logs" project-register --project "Must Not Append" >/dev/null 2>&1; then
+  echo "FAIL registration appended inside an unclosed Markdown fence"; exit 1
+fi
+unclosed_after=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$case_unclosed/logs/sessions/_PROJECTS.md")
+receipts_after=$(find "$case_unclosed/logs/.session-save/project-receipts" -type f | wc -l | tr -d ' ')
+[ "$unclosed_before" = "$unclosed_after" ] || { echo "FAIL malformed registry changed"; exit 1; }
+[ "$receipts_before" = "$receipts_after" ] || { echo "FAIL malformed registry emitted receipt"; exit 1; }
+ok "strict project identity is exact, deterministic, Markdown-aware, and backward-compatible"
+
+python3 "$KERNEL" --home "$case_projects/logs" begin --client claude --project "Website Creation Notes" --name "Website Creation Notes Research" >/dev/null
+registry_before=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$case_projects/logs/sessions/_PROJECTS.md")
+dirs_before=$(find "$case_projects/logs/sessions" -mindepth 1 -maxdepth 1 -type d -print | sort | shasum -a 256 | awk '{print $1}')
+project_audit=$(python3 "$KERNEL" --home "$case_projects/logs" audit-sources --days 7)
+[ "$(printf '%s' "$project_audit" | python3 -c 'import json,sys; print(json.load(sys.stdin)["unregistered_projects"][0])')" = "Website Creation Notes" ] || { echo "FAIL audit did not isolate unregistered project"; exit 1; }
+[ "$(printf '%s' "$project_audit" | python3 -c 'import json,sys; print(sum(1 for x in json.load(sys.stdin)["sources"] if not x["project_registered"]))')" = 1 ] || { echo "FAIL audit registration annotation"; exit 1; }
+registry_after=$(python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest())' "$case_projects/logs/sessions/_PROJECTS.md")
+[ "$registry_before" = "$registry_after" ] || { echo "FAIL audit mutated project registry"; exit 1; }
+dirs_after=$(find "$case_projects/logs/sessions" -mindepth 1 -maxdepth 1 -type d -print | sort | shasum -a 256 | awk '{print $1}')
+[ "$dirs_before" = "$dirs_after" ] || { echo "FAIL audit created a project folder"; exit 1; }
+ok "audit reports unregistered labels without semantic merging or registry mutation"
+
 checkpoint=$(python3 "$KERNEL" --home "$case_records/logs" checkpoint-path --client codex --record "$codex_record" | python3 -c 'import json,sys; print(json.load(sys.stdin)["path"])')
 printf '%s\n' '### 12:00 — codex' '' '- **Now:** testing' > "$checkpoint"
 python3 "$KERNEL" --home "$case_records/logs" sync --client codex --record "$codex_record" --operation checkpoint-written >/dev/null
@@ -271,6 +386,9 @@ ok "kernel refuses existing symlinks below the shared home"
 assert_contains "$ROOT/GUIDE.md" "One record per client session"
 assert_contains "$ROOT/skills/session-save/SKILL.md" "single provisional record"
 assert_contains "$ROOT/skills/session-audit/SKILL.md" "every installed client"
-ok "portable skills align on identity, provisional state, and global audit"
+assert_contains "$ROOT/skills/session-tag/SKILL.md" "require-registered-project"
+assert_contains "$ROOT/skills/session-save/SKILL.md" "never infer identity"
+assert_contains "$ROOT/skills/session-audit/SKILL.md" "semantic resemblance"
+ok "portable skills align on identity, provisional state, and deterministic project safety"
 
 echo "all $pass tests passed"

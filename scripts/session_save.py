@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import fcntl
+import hashlib
 import json
 import os
 import re
@@ -27,6 +28,7 @@ CLIENT_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$")
 STATUSES = {"provisional", "open", "closed", "stale"}
 STATUS_MARKS = {"provisional": "🟡", "open": "🟢", "closed": "✅", "stale": "📦"}
 CONTENT_FILES = ("tag.md", "checkpoints.md", "human.md", "agent.md")
+PROJECT_LINE_RE = re.compile(r"^- \*\*(?P<name>(?:\\.|[^*])+)\*\*\s+—\s+(?P<description>.+)$")
 
 
 class UserError(Exception):
@@ -159,12 +161,151 @@ def slugify(value: str) -> str:
     ascii_value = normalized.encode("ascii", "ignore").decode("ascii").lower()
     slug = re.sub(r"[^a-z0-9]+", "-", ascii_value).strip("-")
     if not slug:
-        slug = "session-" + uuid.uuid4().hex[:8]
+        digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+        slug = "session-" + digest
     return slug[:80].rstrip("-")
 
 
 def project_folder(project: str) -> str:
     return slugify(project)
+
+
+def project_key(project: str) -> str:
+    return unicodedata.normalize("NFC", safe_label(project, "project")).lower()
+
+
+def safe_project(value: str) -> str:
+    return safe_label(value, "project")
+
+
+def encode_project_name(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("*", "\\*")
+
+
+def decode_project_name(value: str) -> str:
+    return re.sub(r"\\(.)", r"\1", value)
+
+
+def project_registry_path(home: Path) -> Path:
+    return safe_under(home, home / "sessions" / "_PROJECTS.md")
+
+
+def read_project_registry(home: Path) -> list[dict[str, str]]:
+    path = project_registry_path(home)
+    if not path.is_file() or path.is_symlink():
+        return []
+    projects: list[dict[str, str]] = []
+    names: set[str] = set()
+    keys: dict[str, str] = {}
+    slugs: dict[str, str] = {}
+    fence_char: str | None = None
+    fence_length = 0
+    for line in path.read_text(errors="replace").splitlines():
+        fence = re.match(r"^ {0,3}(?P<run>`{3,}|~{3,})(?P<tail>.*)$", line)
+        if fence:
+            run = fence.group("run")
+            tail = fence.group("tail")
+            if fence_char is None:
+                fence_char = run[0]
+                fence_length = len(run)
+            elif run[0] == fence_char and len(run) >= fence_length and not tail.strip():
+                fence_char = None
+                fence_length = 0
+            continue
+        if fence_char is not None or line.startswith((" ", "\t")):
+            continue
+        match = PROJECT_LINE_RE.fullmatch(line)
+        if not match:
+            if line.startswith("- **"):
+                fail(f"malformed approved project registry entry: {line}")
+            continue
+        name = decode_project_name(match.group("name")).strip()
+        if name in names:
+            fail(f"duplicate approved project in registry: {name}")
+        key = project_key(name)
+        if key in keys and keys[key] != name:
+            fail(f"approved projects differ only by letter case: {keys[key]} and {name}")
+        slug = project_folder(name)
+        if slug in slugs and slugs[slug] != name:
+            fail(f"approved projects share one folder slug: {slugs[slug]} and {name}")
+        names.add(name)
+        keys[key] = name
+        slugs[slug] = name
+        projects.append({"name": name, "slug": slug, "description": match.group("description").strip()})
+    if fence_char is not None:
+        fail("project registry contains an unclosed Markdown fence")
+    return projects
+
+
+def project_inventory(home: Path) -> dict[str, Any]:
+    approved = read_project_registry(home)
+    approved_keys = {project_key(item["name"]) for item in approved}
+    observed: set[str] = set()
+    for path in record_paths(home):
+        project = read_record(path).get("project")
+        if project_key(project) not in approved_keys:
+            observed.add(project)
+    return {"approved": approved, "observed_unregistered": sorted(observed)}
+
+
+def register_project(args: argparse.Namespace, home: Path) -> dict[str, Any]:
+    initialize_home(home)
+    project = safe_project(args.project)
+    description = " ".join((args.description or "User-approved Session Save project").split())
+    if not description or "\0" in description:
+        fail("invalid project description")
+    if len(description) > 240:
+        fail("project description must be 240 characters or fewer")
+    inventory = project_inventory(home)
+    for item in inventory["approved"]:
+        if project_key(item["name"]) == project_key(project):
+            return {"project": item, "created": False, "registry": str(project_registry_path(home))}
+        if item["slug"] == project_folder(project):
+            fail(f"project folder slug already belongs to: {item['name']}")
+    for observed in inventory["observed_unregistered"]:
+        if project_folder(observed) == project_folder(project) and project_key(observed) != project_key(project):
+            fail(f"existing record folder slug belongs to unregistered project: {observed}")
+    path = project_registry_path(home)
+    current = path.read_text()
+    if current and not current.endswith("\n"):
+        current += "\n"
+    line = f"- **{encode_project_name(project)}** — {description} (first: {now().date().isoformat()})\n"
+    atomic_text(path, current + line, mode=0o644)
+    receipt_id = uuid.uuid4().hex
+    receipt = safe_under(
+        home,
+        home / ".session-save" / "project-receipts" /
+        f"{now().strftime('%Y%m%d-%H%M%S-%f')}_{receipt_id}.json",
+    )
+    atomic_json(receipt, {
+        "schema_version": SCHEMA_VERSION,
+        "receipt_id": receipt_id,
+        "operation": "project-registered",
+        "occurred_at": iso_now(),
+        "project": project,
+        "project_slug": project_folder(project),
+    })
+    return {
+        "project": {"name": project, "slug": project_folder(project), "description": description},
+        "created": True,
+        "registry": str(path),
+        "receipt": str(receipt),
+    }
+
+
+def require_registered_project(home: Path, project: str) -> dict[str, str]:
+    project = safe_project(project)
+    for item in read_project_registry(home):
+        if project_key(item["name"]) == project_key(project):
+            return item
+    fail(f"project is not approved: {project}; select or register it explicitly")
+
+
+def reject_project_slug_collision(home: Path, project: str) -> None:
+    slug = project_folder(project)
+    for item in read_project_registry(home):
+        if item["slug"] == slug and project_key(item["name"]) != project_key(project):
+            fail(f"project folder slug belongs to approved project: {item['name']}")
 
 
 def within_home(home: Path, candidate: Path) -> Path:
@@ -280,13 +421,16 @@ def find_existing(home: Path, client: str, session_id: str | None, slug: str) ->
 def begin_record(args: argparse.Namespace, home: Path) -> dict[str, Any]:
     initialize_home(home)
     client = safe_client(args.client)
-    project = safe_label(args.project, "project")
+    project = safe_project(args.project) if args.require_registered_project else safe_label(args.project, "project")
     name = safe_label(args.name, "name")
     slug = slugify(args.slug or name)
     session_id = safe_label(args.session_id, "session ID") if args.session_id else None
     status = args.status
     if status not in STATUSES:
         fail(f"unknown status: {status}")
+    reject_project_slug_collision(home, project)
+    approved_project = require_registered_project(home, project) if args.require_registered_project else None
+    canonical_project = approved_project["name"] if approved_project else project
     matches = find_existing(home, client, session_id, slug)
     if len(matches) > 1:
         fail("multiple records match; provide a stable session ID or a different slug")
@@ -294,7 +438,7 @@ def begin_record(args: argparse.Namespace, home: Path) -> dict[str, Any]:
     if matches:
         directory = matches[0]
         record = read_record(directory)
-        if record.get("project") != project:
+        if project_key(record.get("project")) != project_key(canonical_project):
             fail("an existing record cannot move projects; create an explicit continuation instead")
         record.update({
             "name": name,
@@ -312,6 +456,7 @@ def begin_record(args: argparse.Namespace, home: Path) -> dict[str, Any]:
             fail("date must use ISO form YYYY-MM-DD")
         if date != parsed_date.isoformat():
             fail("date must use ISO form YYYY-MM-DD")
+        project = canonical_project
         base = home / "sessions" / project_folder(project) / client / f"{date}_{slug}"
         directory = base
         if directory.exists():
@@ -527,6 +672,8 @@ def project_dir_name(value: str) -> str:
 
 
 def audit_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
+    inventory = project_inventory(home)
+    approved_by_key = {project_key(item["name"]): item["name"] for item in inventory["approved"]}
     cutoff = None
     if args.days:
         cutoff = now() - dt.timedelta(days=args.days)
@@ -542,15 +689,25 @@ def audit_sources(args: argparse.Namespace, home: Path) -> dict[str, Any]:
             except ValueError:
                 pass
         directory = envelope.parent
+        canonical_project = approved_by_key.get(project_key(record.get("project")))
         sources.append({
             "record": record,
+            "project_registered": canonical_project is not None,
+            "approved_project": canonical_project,
             "path": str(directory),
             "tag": str(directory / "tag.md") if (directory / "tag.md").is_file() else None,
             "human": str(directory / "human.md") if (directory / "human.md").is_file() else None,
             "agent": str(directory / "agent.md") if (directory / "agent.md").is_file() else None,
         })
     sources.sort(key=lambda item: item["record"].get("updated_at", ""), reverse=True)
-    return {"home": str(home), "sources": sources, "count": len(sources)}
+    unregistered = sorted({item["record"].get("project") for item in sources if not item["project_registered"]})
+    return {
+        "home": str(home),
+        "sources": sources,
+        "count": len(sources),
+        "approved_projects": inventory["approved"],
+        "unregistered_projects": unregistered,
+    }
 
 
 def write_audit(args: argparse.Namespace, home: Path) -> dict[str, str]:
@@ -590,6 +747,18 @@ def build_parser() -> argparse.ArgumentParser:
     begin.add_argument("--surface", default="local")
     begin.add_argument("--model")
     begin.add_argument("--continuation-of")
+    begin.add_argument(
+        "--require-registered-project",
+        action="store_true",
+        help="fail unless --project exactly matches the user-approved registry",
+    )
+
+    sub.add_parser("project-list", help="list approved and observed unregistered project names")
+    project_check = sub.add_parser("project-check", help="require one exact approved project name")
+    project_check.add_argument("--project", required=True)
+    project_register = sub.add_parser("project-register", help="register one explicitly approved project")
+    project_register.add_argument("--project", required=True)
+    project_register.add_argument("--description")
 
     locate = sub.add_parser("locate", help="find an existing client-namespaced record")
     locate.add_argument("--client", required=True)
@@ -651,6 +820,13 @@ def main() -> int:
         elif args.command == "begin":
             with mutation_lock(home):
                 result = begin_record(args, home)
+        elif args.command == "project-list":
+            result = project_inventory(home)
+        elif args.command == "project-check":
+            result = {"project": require_registered_project(home, args.project), "approved": True}
+        elif args.command == "project-register":
+            with mutation_lock(home):
+                result = register_project(args, home)
         elif args.command == "locate":
             result = locate_record(args, home)
         elif args.command == "sync":

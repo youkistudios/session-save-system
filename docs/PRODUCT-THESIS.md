@@ -42,6 +42,8 @@ Cursor can run several models; Claude and Codex can appear in several interfaces
 6. Capture before archive; archive never delete.
 7. Unsupported client capabilities degrade honestly.
 8. Cross-client support must not add a fifth user ritual.
+9. Project identity is explicit; semantic resemblance never creates or merges a project.
+10. Audit summarizes evidence but cannot own or update an authoritative master plan.
 
 ## Proof standard
 

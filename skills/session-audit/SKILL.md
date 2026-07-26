@@ -10,12 +10,12 @@ compatibility: Requires Python 3 and local filesystem write access. Installed ad
 Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the active client identity. Read the shared home’s `GUIDE.md`.
 
 1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>`. Stop unless `ok` is true and `migration_required` is zero.
-2. Run `audit-sources --days 7` or the requested window. This returns source-attributed records from every installed client.
+2. Run `audit-sources --days 7` or the requested window. This returns source-attributed records from every installed client, approved projects, and any unregistered project labels.
 3. Read only each returned `record.json`, `tag.md`, and `human.md` when present. Never read raw transcripts. For every claim retain the source client and record path.
-4. Group by project first. Within each project report **Achieved**, **Open plans not actioned**, **High-value assets**, and **Live threads / pending decisions**. Surface cross-project dependencies and contradictions between client records rather than silently reconciling them.
+4. Group only by the returned `approved_project` canonical name. The kernel may normalize letter case for migrated labels; never merge from punctuation changes, tags, keywords, similar titles, or semantic resemblance. Keep every unregistered label separate under **Unregistered project labels**, cite its records, and state that no merge was performed. Within approved projects report **Verified outcomes**, **Reported progress**, **Open / unresolved**, **High-value assets**, and **Live threads / pending decisions**. Surface dependencies and contradictions rather than silently reconciling them.
 5. Name close-out debt: finished/open records missing `human.md` are not banked knowledge.
 6. Write a complete audit draft to a temporary regular file. Include a five-fact GIST, bottom line, by-project sections, cross-wires, and prioritized next actions. Prefix factual bullets with `[Claude]`, `[Codex]`, or the returned client ID and link the source record.
 7. Run `write-audit --week <YYYY-Www> --input <draft>` to publish atomically into `audits/global/`. Remove the temporary draft.
 8. Print the audit GIST and real output path.
 
-An audit is read-only over source records. It may replace the same weekly global report atomically, but it never edits session records or erases provenance.
+An audit is read-only over source records and the project registry. It may replace the same weekly global report atomically, but it never edits session records, registers/aliases/merges projects, creates project folders, updates a master plan, invents project stages, or erases provenance.

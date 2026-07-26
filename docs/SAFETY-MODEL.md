@@ -29,6 +29,14 @@
 - `_INDEX.md` is derived and can be rebuilt from source envelopes.
 - Skills do not edit machine envelopes or the global index directly.
 
+## Project guarantees
+
+- Normal Tag and first-Checkpoint creation require one exact approved project.
+- Similar keywords, tags, filenames, and titles cannot register, alias, merge, or create projects.
+- Registration emits a receipt but creates no project content folder.
+- Folder-slug collisions fail closed.
+- Audit reports unregistered labels separately and cannot mutate the registry, create project folders, infer stages, or update a master plan.
+
 ## Migration guarantees
 
 - Dry-run inventory precedes apply and reports legacy symlinks.
@@ -54,7 +62,7 @@
 - Archive, never delete.
 - Capture before archive.
 - One record per client session.
-- No cross-client merge based on title similarity.
+- No cross-client or cross-project merge based on title, tag, keyword, file, or semantic similarity.
 - A first Save may create one provisional record without a verdict.
 - Tag upgrades that record; Summary requires an existing tag and closes it.
 - Audits retain source-client labels and surface contradictions.

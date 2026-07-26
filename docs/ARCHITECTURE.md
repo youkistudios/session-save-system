@@ -49,6 +49,12 @@ Markdown contains the human and agent narrative. Skills never edit the envelope 
 4. Two clients never share one record directory.
 5. Similar names never trigger cross-client merging.
 6. `model_id` is optional metadata and never a path key.
+7. Project identity is a user-approved registry name after Unicode/case normalization, never punctuation normalization or a semantic match.
+8. Project registration creates no content folder; the first approved record does.
+
+## Project registry
+
+`sessions/_PROJECTS.md` remains the user-readable approved registry. The kernel exposes exact list/check/register operations and a strict begin flag used by normal skills. Historical unregistered labels remain readable and are reported separately by Audit. Slug collisions fail closed. There are no automatic aliases, keyword clustering, lifecycle-stage inference, or master-plan writes.
 
 ## State
 
@@ -75,7 +81,7 @@ A stale or interrupted derived view can be rebuilt. Source records remain the au
 
 ## Global audit
 
-`audit-sources` returns record envelopes and available tag/human/agent paths across all clients. The skill groups them by project and attributes every factual bullet to its client and source path. Contradictions remain visible. `write-audit` atomically publishes the combined weekly report.
+`audit-sources` returns record envelopes, canonical approved project names, registration state, and available tag/human/agent paths across all clients. The skill groups only the returned approved identity and attributes every factual bullet to its client and source path. Case-only migrated labels may map to one canonical project; punctuation and semantic variants do not. Unregistered labels remain separate; contradictions remain visible. Audit cannot mutate the project registry or a master plan. `write-audit` atomically publishes the combined weekly report.
 
 ## Home resolution
 

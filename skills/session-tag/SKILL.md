@@ -10,9 +10,9 @@ compatibility: Requires Python 3 and local filesystem write access. Installed ad
 Resolve this skill directory as `SKILL_DIR`. Read `CLIENT.md` beside this file for the installed `client_id`. Read `GUIDE.md` in the shared Session Save home for the complete behavioral contract.
 
 1. Run `python3 "$SKILL_DIR/scripts/session_save.py" doctor --client <client_id>` and use the returned home. Stop unless `ok` is true and `migration_required` is zero.
-2. Resolve the project from `sessions/_PROJECTS.md`; propose a new project on real ambiguity. Name the session `<Project> Topic`, purpose before work-done.
+2. Run `project-list`. Select one exact approved project only when the user’s intent is clear. Similar tags, filenames, repositories, and topic words are not identity proof. On ambiguity, ask from approved choices. For a genuinely new project, wait for explicit confirmation, then run `project-register --project <project> --description <description>`. Name the session `<Project> Topic`, purpose before work-done.
 3. Determine FINISHED, LIVE, or STALE using the guide. Default to one arc; split only when the work target changed and new assets or a day boundary exists.
-4. Run `begin --client <client_id> --project <project> --name <name> --slug <slug> --status open [--session-id <id>] [--model <model>]`. A stable host session ID is optional; never invent one. Reuse the returned record path.
+4. Run `begin --client <client_id> --project <project> --name <name> --slug <slug> --status open --require-registered-project [--session-id <id>] [--model <model>]`. A stable host session ID is optional; never invent one. Reuse the returned record path.
 5. Write or refresh `<record>/tag.md` using the guide template. Preserve `record.json`. Updates are in place; never create another folder manually.
 6. Run `sync --client <client_id> --record <record> --status open --gist <concise-gist> --operation tag-written` to atomically refresh metadata and the global index.
 7. Route FINISHED → session-summary; LIVE → session-save; STALE → archive guidance. Rename/archive only if the current client exposes that capability and the user confirms.

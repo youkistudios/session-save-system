@@ -2,6 +2,16 @@
 
 All notable changes to Session Save System are documented here.
 
+## 2.0.0-alpha.3 — 2026-07-26
+
+- Add exact user-approved project list/check/register kernel primitives.
+- Add strict project enforcement for normal Tag and first-Checkpoint creation.
+- Make project registration receipted and folder-free until the first approved record.
+- Report unregistered historical project labels in Audit without mutation or semantic merging.
+- Reject approved names that collide on one project folder slug.
+- Explicitly exclude semantic project clustering, automatic stage inference, and master-plan mutation.
+- Expand the isolated suite to 25 tests.
+
 ## 2.0.0-alpha.2 — 2026-07-26
 
 - Converge eight installed persistence-kernel copies into one manifest-owned canonical kernel under `~/.local/share/session-save/`.
