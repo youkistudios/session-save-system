@@ -63,9 +63,9 @@
 - Capture before archive.
 - One record per client session.
 - No cross-client or cross-project merge based on title, tag, keyword, file, or semantic similarity.
-- A first Save may create one provisional record without a verdict.
+- A first Checkpoint may create one provisional record without a verdict.
 - Tag upgrades that record; Summary requires an existing tag and closes it.
-- Audits retain source-client labels and surface contradictions.
+- Reviews retain source-client labels and surface contradictions.
 
 ## Recovery
 

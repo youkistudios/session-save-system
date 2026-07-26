@@ -24,6 +24,11 @@ REQUIRED = [
     "automation/workflows/pages.yml",
 ]
 SKILLS = ("session-tag", "session-save", "session-summary", "session-audit")
+ALIASES = {
+    "session-checkpoint": "session-save",
+    "session-close": "session-summary",
+    "session-review": "session-audit",
+}
 
 
 def fail(message: str) -> None:
@@ -80,6 +85,18 @@ for skill_name in SKILLS:
     description = re.search(r"^description: (.+)$", text, re.MULTILINE)
     if not description or len(description.group(1)) > 1024:
         fail(f"invalid skill description: {skill_name}")
+
+for alias, canonical in ALIASES.items():
+    path = ROOT / "skills" / alias / "SKILL.md"
+    if not path.is_file():
+        fail(f"missing lifecycle alias: {path.relative_to(ROOT)}")
+    text = path.read_text()
+    for phrase in (f"name: {alias}\n", "CLIENT.md", "scripts/session_save.py", f"../{canonical}/SKILL.md"):
+        if phrase not in text:
+            fail(f"invalid lifecycle alias {alias}: missing {phrase}")
+    command = ROOT / "commands" / f"{alias}.md"
+    if not command.is_file() or f"`{alias}` skill" not in command.read_text():
+        fail(f"missing Claude command alias: {alias}")
 
 claude = (ROOT / "adapters/claude/CLIENT.md").read_text()
 codex = (ROOT / "adapters/codex/CLIENT.md").read_text()

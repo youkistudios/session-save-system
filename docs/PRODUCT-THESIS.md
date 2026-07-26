@@ -13,9 +13,9 @@ The primary user works across long or branching sessions and may move one projec
 ## Product model
 
 1. **Tag:** establish client, project, name, gist, assets, and honest state.
-2. **Save:** preserve in-flight state as an immutable client-owned checkpoint.
-3. **Summarize:** close the source record for human reading and agent resumption.
-4. **Audit:** synthesize recent records across clients, grouped by project.
+2. **Checkpoint:** preserve in-flight state as an immutable client-owned checkpoint.
+3. **Close:** close the source record for human reading and agent resumption.
+4. **Review:** synthesize recent records across clients, grouped by project.
 
 The four moments share one rulebook and one record contract. Client adapters own invocation differences; the kernel owns persistence. `_INDEX.md` is a rebuildable view, not a second source of truth.
 
@@ -43,7 +43,7 @@ Cursor can run several models; Claude and Codex can appear in several interfaces
 7. Unsupported client capabilities degrade honestly.
 8. Cross-client support must not add a fifth user ritual.
 9. Project identity is explicit; semantic resemblance never creates or merges a project.
-10. Audit summarizes evidence but cannot own or update an authoritative master plan.
+10. Review summarizes evidence but cannot own or update an authoritative master plan.
 
 ## Proof standard
 

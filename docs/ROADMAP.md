@@ -10,7 +10,7 @@
 
 ## Next — release witnesses
 
-- Run clean end-to-end Tag, Save, Summarize, and Audit journeys in current Claude Code and Codex clients.
+- Run clean end-to-end Tag, Checkpoint, Close, and Review journeys in current Claude Code and Codex clients.
 - Publish a versioned capability matrix for session IDs, rename, archive, and history visibility.
 - Test installer/kernel behavior on a second POSIX environment.
 - Add golden content fixtures without turning narrative quality into a false deterministic claim.

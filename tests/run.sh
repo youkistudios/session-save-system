@@ -29,6 +29,13 @@ assert_file "$case_fresh/claude/skills/session-tag/CLIENT.md"
 assert_file "$case_fresh/agents/skills/session-tag/CLIENT.md"
 assert_file "$case_fresh/claude/skills/session-save/scripts/session_save.py"
 assert_file "$case_fresh/agents/skills/session-save/scripts/session_save.py"
+for alias in session-checkpoint session-close session-review; do
+  assert_file "$case_fresh/claude/skills/$alias/SKILL.md"
+  assert_file "$case_fresh/claude/skills/$alias/scripts/session_save.py"
+  assert_file "$case_fresh/agents/skills/$alias/SKILL.md"
+  assert_file "$case_fresh/agents/skills/$alias/scripts/session_save.py"
+  assert_file "$case_fresh/claude/commands/$alias.md"
+done
 assert_file "$case_fresh/home/.local/share/session-save/session_save.py"
 assert_file "$case_fresh/home/.local/share/session-save/VERSION"
 assert_file "$case_fresh/home/.local/share/session-save/install.manifest"
@@ -41,8 +48,8 @@ assert_file "$case_fresh/claude/commands/st.md"
 assert_absent "$case_fresh/agents/commands/st.md"
 assert_contains "$case_fresh/claude/skills/session-tag/CLIENT.md" '`client_id`: `claude`'
 assert_contains "$case_fresh/agents/skills/session-tag/CLIENT.md" '`client_id`: `codex`'
-[ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 21 ] || { echo "FAIL Claude manifest count"; exit 1; }
-[ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 12 ] || { echo "FAIL Codex manifest count"; exit 1; }
+[ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 33 ] || { echo "FAIL Claude manifest count"; exit 1; }
+[ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 21 ] || { echo "FAIL Codex manifest count"; exit 1; }
 ok "fresh install creates one shared kernel and exact thin Claude/Codex adapters"
 
 assert_file "$case_fresh/config/config.json"
@@ -72,7 +79,27 @@ assert_contains "$case_collision/agents/skills/session-tag/SKILL.md" "unrelated 
 if awk -F '\t' '$2 == "skills/session-tag/SKILL.md" { found=1 } END { exit found ? 0 : 1 }' "$case_collision/agents/session-save-system.manifest"; then
   echo "FAIL unrelated Codex collision was claimed"; exit 1
 fi
-ok "unrelated client files are skipped and unclaimed"
+case_alias_collision=$TEST_ROOT/alias-collision
+mkdir -p "$case_alias_collision/home" "$case_alias_collision/claude" "$case_alias_collision/agents/skills/session-save" "$case_alias_collision/config"
+printf '%s\n' 'unrelated checkpoint behavior' > "$case_alias_collision/agents/skills/session-save/SKILL.md"
+HOME="$case_alias_collision/home" CLAUDE_CONFIG_DIR="$case_alias_collision/claude" AGENTS_CONFIG_DIR="$case_alias_collision/agents" SESSION_SAVE_CONFIG="$case_alias_collision/config/config.json" SESSION_SAVE_HOME="$case_alias_collision/logs" "$ROOT/install.sh" >/dev/null
+assert_contains "$case_alias_collision/agents/skills/session-save/SKILL.md" 'unrelated checkpoint behavior'
+assert_absent "$case_alias_collision/agents/skills/session-checkpoint/SKILL.md"
+if awk -F '\t' '$2 ~ /^skills\/session-checkpoint\// { found=1 } END { exit found ? 0 : 1 }' "$case_alias_collision/agents/session-save-system.manifest"; then
+  echo "FAIL alias installed without its managed canonical skill"; exit 1
+fi
+case_alias_component=$TEST_ROOT/alias-component-collision
+mkdir -p "$case_alias_component/home" "$case_alias_component/claude/skills/session-checkpoint" "$case_alias_component/agents" "$case_alias_component/config"
+printf '%s\n' 'unrelated alias adapter' > "$case_alias_component/claude/skills/session-checkpoint/CLIENT.md"
+HOME="$case_alias_component/home" CLAUDE_CONFIG_DIR="$case_alias_component/claude" AGENTS_CONFIG_DIR="$case_alias_component/agents" SESSION_SAVE_CONFIG="$case_alias_component/config/config.json" SESSION_SAVE_HOME="$case_alias_component/logs" "$ROOT/install.sh" >/dev/null
+assert_contains "$case_alias_component/claude/skills/session-checkpoint/CLIENT.md" 'unrelated alias adapter'
+assert_absent "$case_alias_component/claude/skills/session-checkpoint/SKILL.md"
+assert_absent "$case_alias_component/claude/skills/session-checkpoint/scripts/session_save.py"
+assert_absent "$case_alias_component/claude/commands/session-checkpoint.md"
+if awk -F '\t' '$2 ~ /session-checkpoint/ { found=1 } END { exit found ? 0 : 1 }' "$case_alias_component/claude/session-save-system.manifest"; then
+  echo "FAIL partial alias unit entered ownership manifest"; exit 1
+fi
+ok "unrelated client files are skipped and alias installation is dependency-atomic"
 
 case_backup=$TEST_ROOT/backup
 install_case "$case_backup"
@@ -312,11 +339,27 @@ assert_file "$case_remove/claude/commands/st.md"
 assert_contains "$case_remove/claude/commands/st.md" 'preserve local edit'
 assert_absent "$case_remove/claude/skills/session-save/SKILL.md"
 assert_absent "$case_remove/agents/skills/session-save/SKILL.md"
+assert_absent "$case_remove/claude/skills/session-checkpoint/SKILL.md"
+assert_absent "$case_remove/agents/skills/session-close/SKILL.md"
+assert_absent "$case_remove/claude/commands/session-review.md"
 assert_absent "$case_remove/home/.local/share/session-save/session_save.py"
 assert_absent "$case_remove/home/.local/share/session-save/install.manifest"
 assert_file "$case_remove/logs/keep.md"
 assert_file "$case_remove/config/config.json"
 ok "uninstall removes exact adapters and unneeded shared kernel while preserving records"
+
+case_modified_alias=$TEST_ROOT/modified-alias
+install_case "$case_modified_alias"
+printf '%s\n' 'locally modified lifecycle alias' > "$case_modified_alias/claude/skills/session-checkpoint/SKILL.md"
+HOME="$case_modified_alias/home" CLAUDE_CONFIG_DIR="$case_modified_alias/claude" AGENTS_CONFIG_DIR="$case_modified_alias/agents" SESSION_SAVE_CONFIG="$case_modified_alias/config/config.json" "$ROOT/uninstall.sh" >/dev/null
+assert_contains "$case_modified_alias/claude/skills/session-checkpoint/SKILL.md" 'locally modified lifecycle alias'
+assert_file "$case_modified_alias/claude/skills/session-checkpoint/CLIENT.md"
+assert_file "$case_modified_alias/claude/skills/session-checkpoint/scripts/session_save.py"
+assert_file "$case_modified_alias/claude/skills/session-save/SKILL.md"
+assert_file "$case_modified_alias/claude/session-save-system.manifest"
+assert_file "$case_modified_alias/home/.local/share/session-save/session_save.py"
+assert_absent "$case_modified_alias/agents/skills/session-checkpoint/SKILL.md"
+ok "uninstall preserves a complete client dependency unit when one managed alias file changed"
 
 case_partial=$TEST_ROOT/partial-remove
 install_case "$case_partial"
@@ -389,6 +432,9 @@ assert_contains "$ROOT/skills/session-audit/SKILL.md" "every installed client"
 assert_contains "$ROOT/skills/session-tag/SKILL.md" "require-registered-project"
 assert_contains "$ROOT/skills/session-save/SKILL.md" "never infer identity"
 assert_contains "$ROOT/skills/session-audit/SKILL.md" "semantic resemblance"
-ok "portable skills align on identity, provisional state, and deterministic project safety"
+assert_contains "$ROOT/skills/session-checkpoint/SKILL.md" "../session-save/SKILL.md"
+assert_contains "$ROOT/skills/session-close/SKILL.md" "../session-summary/SKILL.md"
+assert_contains "$ROOT/skills/session-review/SKILL.md" "../session-audit/SKILL.md"
+ok "portable skills align on identity, lifecycle aliases, provisional state, and deterministic project safety"
 
 echo "all $pass tests passed"
