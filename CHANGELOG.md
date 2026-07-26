@@ -9,6 +9,8 @@ All notable changes to Session Save System are documented here.
 - Keep each new name as a thin adapter to the existing canonical behavior rather than forking the kernel or schema.
 - Install alias skill components atomically; preserve unrelated command collisions without withholding the complete skill.
 - Present Tag · Checkpoint · Close · Review consistently in installation and usage guidance.
+- Define Session Save explicitly as a local session-memory architecture with an artifact-reference boundary.
+- Replace the public site with a dependency-light operating manual, manual lifecycle console, early evidence boundary, and accessible copy feedback.
 
 ## 2.0.0-alpha.3 — 2026-07-26
 

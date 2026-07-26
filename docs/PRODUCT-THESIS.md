@@ -4,7 +4,7 @@
 
 The durable unit of AI-assisted work should belong to the user—not to the model, vendor, or chat application that happened to produce it.
 
-Session Save is a client-neutral local memory layer. Claude Code and Codex invoke the same four moments while writing source-attributed records into one user-owned home.
+Session Save is a client-neutral local session-memory architecture. Claude Code and Codex invoke the same four moments while writing captured context, decisions, progress, artifact references, open questions, and resumption state into one user-owned, source-attributed home.
 
 ## User and job
 
