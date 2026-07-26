@@ -5,6 +5,8 @@ set -eu
 CLAUDE_DIR=${CLAUDE_CONFIG_DIR:-"$HOME/.claude"}
 AGENTS_DIR=${AGENTS_CONFIG_DIR:-"$HOME/.agents"}
 CLIENTS=${SESSION_SAVE_CLIENTS:-"claude,codex"}
+LIB_DIR=${SESSION_SAVE_LIB_DIR:-"$HOME/.local/share/session-save"}
+SHARED_MANIFEST=$LIB_DIR/install.manifest
 TEMP_FILES=
 trap '[ -n "$TEMP_FILES" ] && rm -f $TEMP_FILES 2>/dev/null || true' EXIT HUP INT TERM
 
@@ -110,9 +112,75 @@ uninstall_client() {
   rm -f "$remaining"; TEMP_FILES=
 }
 
+uninstall_shared() {
+  echo "shared kernel:"
+  if [ -L "$LIB_DIR" ] || { [ -e "$LIB_DIR" ] && [ ! -d "$LIB_DIR" ]; }; then
+    echo "  shared library path is not a real directory; nothing removed"
+    return
+  fi
+  if [ -L "$SHARED_MANIFEST" ] || { [ -e "$SHARED_MANIFEST" ] && [ ! -f "$SHARED_MANIFEST" ]; }; then
+    echo "  shared ownership manifest is not a regular file; nothing removed"
+    return
+  fi
+  if [ ! -f "$SHARED_MANIFEST" ]; then
+    echo "  no shared ownership manifest; nothing removed"
+    return
+  fi
+
+  remaining=$(mktemp "${TMPDIR:-/tmp}/session-save-shared-remaining.XXXXXX")
+  TEMP_FILES="$TEMP_FILES $remaining"
+  while IFS="$(printf '\t')" read -r expected relative; do
+    [ -n "$expected" ] && [ -n "$relative" ] || continue
+    case "$relative" in
+      session_save.py|VERSION) ;;
+      *)
+        echo "  preserved unrecognized shared manifest path: $relative"
+        printf '%s\t%s\n' "$expected" "$relative" >> "$remaining"
+        continue
+        ;;
+    esac
+    target=$LIB_DIR/$relative
+    if [ ! -e "$target" ]; then
+      echo "  already absent: $relative"
+    elif [ -L "$target" ] || [ ! -f "$target" ]; then
+      echo "  preserved non-file shared target: $relative"
+      printf '%s\t%s\n' "$expected" "$relative" >> "$remaining"
+    elif [ "$(hash_file "$target")" = "$expected" ]; then
+      rm -f "$target"
+      echo "  removed verified shared file: $relative"
+    else
+      echo "  preserved modified shared file: $relative"
+      printf '%s\t%s\n' "$expected" "$relative" >> "$remaining"
+    fi
+  done < "$SHARED_MANIFEST"
+
+  if [ -s "$remaining" ]; then
+    cp "$remaining" "$SHARED_MANIFEST"
+    echo "  shared manifest retained for preserved files"
+  else
+    rm -f "$SHARED_MANIFEST"
+    rmdir "$LIB_DIR" 2>/dev/null || true
+    echo "  shared ownership manifest removed"
+  fi
+  rm -f "$remaining"; TEMP_FILES=
+}
+
 echo "Session Save System v2 uninstaller"
 contains_client claude && uninstall_client claude "$CLAUDE_DIR"
 contains_client codex && uninstall_client codex "$AGENTS_DIR"
+
+manifest_has_launcher() {
+  manifest=$1
+  [ -f "$manifest" ] || return 1
+  awk -F '\t' '{ n=split($2,p,"/"); if (n == 4 && p[1] == "skills" && p[3] == "scripts" && p[4] == "session_save.py") found=1 } END { exit found ? 0 : 1 }' "$manifest"
+}
+
+if manifest_has_launcher "$CLAUDE_DIR/session-save-system.manifest" || manifest_has_launcher "$AGENTS_DIR/session-save-system.manifest"; then
+  echo "shared kernel:"
+  echo "  retained because a managed kernel launcher remains installed"
+else
+  uninstall_shared
+fi
 
 echo ""
 echo "Uninstall complete. The shared config, logs, migration sources, and backups were not touched."

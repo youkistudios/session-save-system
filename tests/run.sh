@@ -29,13 +29,21 @@ assert_file "$case_fresh/claude/skills/session-tag/CLIENT.md"
 assert_file "$case_fresh/agents/skills/session-tag/CLIENT.md"
 assert_file "$case_fresh/claude/skills/session-save/scripts/session_save.py"
 assert_file "$case_fresh/agents/skills/session-save/scripts/session_save.py"
+assert_file "$case_fresh/home/.local/share/session-save/session_save.py"
+assert_file "$case_fresh/home/.local/share/session-save/VERSION"
+assert_file "$case_fresh/home/.local/share/session-save/install.manifest"
+if cmp -s "$case_fresh/claude/skills/session-save/scripts/session_save.py" "$case_fresh/home/.local/share/session-save/session_save.py"; then
+  echo "FAIL installed skill still contains the full kernel"; exit 1
+fi
+HOME="$case_fresh/home" python3 "$case_fresh/agents/skills/session-save/scripts/session_save.py" --home "$case_fresh/logs" doctor --client codex > "$case_fresh/launcher-doctor.json"
+assert_contains "$case_fresh/launcher-doctor.json" '"client": "codex"'
 assert_file "$case_fresh/claude/commands/st.md"
 assert_absent "$case_fresh/agents/commands/st.md"
 assert_contains "$case_fresh/claude/skills/session-tag/CLIENT.md" '`client_id`: `claude`'
 assert_contains "$case_fresh/agents/skills/session-tag/CLIENT.md" '`client_id`: `codex`'
 [ "$(wc -l < "$case_fresh/claude/session-save-system.manifest" | tr -d ' ')" = 21 ] || { echo "FAIL Claude manifest count"; exit 1; }
 [ "$(wc -l < "$case_fresh/agents/session-save-system.manifest" | tr -d ' ')" = 12 ] || { echo "FAIL Codex manifest count"; exit 1; }
-ok "fresh install creates exact Claude and Codex adapters"
+ok "fresh install creates one shared kernel and exact thin Claude/Codex adapters"
 
 assert_file "$case_fresh/config/config.json"
 python3 - "$case_fresh/config/config.json" "$case_fresh/logs" <<'PY'
@@ -77,6 +85,16 @@ assert_file "$backup"
 assert_contains "$backup" "local managed edit"
 assert_contains "$case_backup/agents/skills/session-save/CLIENT.md" '`client_id`: `codex`'
 ok "managed adapter replacement is recoverable"
+
+case_shared_conflict=$TEST_ROOT/shared-conflict
+mkdir -p "$case_shared_conflict/home/.local/share/session-save" "$case_shared_conflict/claude" "$case_shared_conflict/agents" "$case_shared_conflict/config"
+printf '%s\n' 'unrelated shared kernel' > "$case_shared_conflict/home/.local/share/session-save/session_save.py"
+if HOME="$case_shared_conflict/home" CLAUDE_CONFIG_DIR="$case_shared_conflict/claude" AGENTS_CONFIG_DIR="$case_shared_conflict/agents" SESSION_SAVE_CONFIG="$case_shared_conflict/config/config.json" SESSION_SAVE_HOME="$case_shared_conflict/logs" "$ROOT/install.sh" >/dev/null 2>&1; then
+  echo "FAIL unowned shared kernel was silently claimed"; exit 1
+fi
+assert_contains "$case_shared_conflict/home/.local/share/session-save/session_save.py" 'unrelated shared kernel'
+assert_absent "$case_shared_conflict/claude/session-save-system.manifest"
+ok "installer refuses an unowned conflicting shared kernel"
 
 case_records=$TEST_ROOT/records
 mkdir -p "$case_records/home"
@@ -157,7 +175,7 @@ case_migration_help=$TEST_ROOT/migration-help
 mkdir -p "$case_migration_help/home" "$case_migration_help/claude" "$case_migration_help/agents" "$case_migration_help/config" "$case_migration_help/logs/sessions/Old/2026-07-01_old"
 printf '%s\n' '# Old' > "$case_migration_help/logs/sessions/Old/2026-07-01_old/tag.md"
 (cd /tmp && HOME="$case_migration_help/home" CLAUDE_CONFIG_DIR="$case_migration_help/claude" AGENTS_CONFIG_DIR="$case_migration_help/agents" SESSION_SAVE_CONFIG="$case_migration_help/config/config.json" SESSION_SAVE_HOME="$case_migration_help/logs" "$ROOT/install.sh") > "$case_migration_help/output.txt"
-assert_contains "$case_migration_help/output.txt" "python3 \"$ROOT/scripts/session_save.py\""
+assert_contains "$case_migration_help/output.txt" "python3 \"$case_migration_help/home/.local/share/session-save/session_save.py\""
 ok "migration instructions use an absolute runnable kernel path"
 
 case_audit=$TEST_ROOT/audit
@@ -179,9 +197,27 @@ assert_file "$case_remove/claude/commands/st.md"
 assert_contains "$case_remove/claude/commands/st.md" 'preserve local edit'
 assert_absent "$case_remove/claude/skills/session-save/SKILL.md"
 assert_absent "$case_remove/agents/skills/session-save/SKILL.md"
+assert_absent "$case_remove/home/.local/share/session-save/session_save.py"
+assert_absent "$case_remove/home/.local/share/session-save/install.manifest"
 assert_file "$case_remove/logs/keep.md"
 assert_file "$case_remove/config/config.json"
-ok "uninstall removes exact adapters and preserves edits, config, and records"
+ok "uninstall removes exact adapters and unneeded shared kernel while preserving records"
+
+case_partial=$TEST_ROOT/partial-remove
+install_case "$case_partial"
+HOME="$case_partial/home" CLAUDE_CONFIG_DIR="$case_partial/claude" AGENTS_CONFIG_DIR="$case_partial/agents" SESSION_SAVE_CONFIG="$case_partial/config/config.json" SESSION_SAVE_CLIENTS=claude "$ROOT/uninstall.sh" >/dev/null
+assert_absent "$case_partial/claude/skills/session-save/SKILL.md"
+assert_file "$case_partial/agents/skills/session-save/SKILL.md"
+assert_file "$case_partial/home/.local/share/session-save/session_save.py"
+ok "partial uninstall retains the shared kernel for the remaining client"
+
+case_modified_shared=$TEST_ROOT/modified-shared
+install_case "$case_modified_shared"
+printf '%s\n' 'locally modified shared kernel' > "$case_modified_shared/home/.local/share/session-save/session_save.py"
+HOME="$case_modified_shared/home" CLAUDE_CONFIG_DIR="$case_modified_shared/claude" AGENTS_CONFIG_DIR="$case_modified_shared/agents" SESSION_SAVE_CONFIG="$case_modified_shared/config/config.json" "$ROOT/uninstall.sh" >/dev/null
+assert_contains "$case_modified_shared/home/.local/share/session-save/session_save.py" 'locally modified shared kernel'
+assert_file "$case_modified_shared/home/.local/share/session-save/install.manifest"
+ok "uninstall preserves a modified shared kernel and its ownership evidence"
 
 case_legacy=$TEST_ROOT/no-manifest
 mkdir -p "$case_legacy/home" "$case_legacy/claude/commands" "$case_legacy/agents"

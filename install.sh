@@ -21,6 +21,8 @@ CLIENTS=${SESSION_SAVE_CLIENTS:-"claude,codex"}
 CONFIG_FILE=${SESSION_SAVE_CONFIG:-"$HOME/.config/session-save/config.json"}
 STAMP=$(date +%Y%m%d-%H%M%S)
 STATE_BACKUP=${SESSION_SAVE_STATE_DIR:-"$HOME/.local/state/session-save"}/backups/$STAMP
+LIB_DIR=${SESSION_SAVE_LIB_DIR:-"$HOME/.local/share/session-save"}
+SHARED_MANIFEST=$LIB_DIR/install.manifest
 TEMP_FILES=
 
 cleanup() {
@@ -115,6 +117,69 @@ PY
   TEMP_FILES=
 fi
 
+install_shared() {
+  if [ -L "$LIB_DIR" ] || { [ -e "$LIB_DIR" ] && [ ! -d "$LIB_DIR" ]; }; then
+    echo "Cannot use shared library path because it is not a real directory: $LIB_DIR" >&2
+    exit 1
+  fi
+  mkdir -p "$LIB_DIR"
+  if [ -L "$SHARED_MANIFEST" ] || { [ -e "$SHARED_MANIFEST" ] && [ ! -f "$SHARED_MANIFEST" ]; }; then
+    echo "Cannot use shared ownership manifest: $SHARED_MANIFEST" >&2
+    exit 1
+  fi
+
+  shared_previous_hash() {
+    [ -f "$SHARED_MANIFEST" ] || return 0
+    awk -F '\t' -v wanted="$1" '$2 == wanted { print $1; exit }' "$SHARED_MANIFEST"
+  }
+
+  # Fail closed before changing anything when an unowned shared target conflicts.
+  for pair in "$REPO_DIR/scripts/session_save.py:session_save.py" "$REPO_DIR/VERSION:VERSION"; do
+    source_file=${pair%:*}
+    relative=${pair#*:}
+    target=$LIB_DIR/$relative
+    prior=$(shared_previous_hash "$relative")
+    if [ -L "$target" ] || { [ -e "$target" ] && [ ! -f "$target" ]; }; then
+      echo "Cannot replace non-regular shared target: $target" >&2
+      exit 1
+    fi
+    if [ -f "$target" ] && ! cmp -s "$source_file" "$target" && [ -z "$prior" ]; then
+      echo "Unowned shared target conflicts with Session Save: $target" >&2
+      exit 1
+    fi
+  done
+
+  next_manifest=$(mktemp "$LIB_DIR/.install.manifest.XXXXXX")
+  TEMP_FILES="$TEMP_FILES $next_manifest"
+  for pair in "$REPO_DIR/scripts/session_save.py:session_save.py" "$REPO_DIR/VERSION:VERSION"; do
+    source_file=${pair%:*}
+    relative=${pair#*:}
+    target=$LIB_DIR/$relative
+    if [ -f "$target" ] && cmp -s "$source_file" "$target"; then
+      echo "  verified shared $relative"
+    else
+      if [ -f "$target" ]; then
+        mkdir -p "$STATE_BACKUP/shared"
+        cp -p "$target" "$STATE_BACKUP/shared/$relative"
+        echo "  backed up shared $relative"
+      fi
+      staged=$(mktemp "$LIB_DIR/.$relative.XXXXXX")
+      TEMP_FILES="$TEMP_FILES $staged"
+      cp "$source_file" "$staged"
+      case "$relative" in
+        session_save.py) chmod 700 "$staged" ;;
+        *) chmod 600 "$staged" ;;
+      esac
+      mv "$staged" "$target"
+      echo "  installed shared $relative"
+    fi
+    printf '%s\t%s\n' "$(hash_file "$target")" "$relative" >> "$next_manifest"
+  done
+  mv "$next_manifest" "$SHARED_MANIFEST"
+  TEMP_FILES=
+  echo "  shared ownership manifest: $SHARED_MANIFEST"
+}
+
 install_client() {
   client=$1
   target_root=$2
@@ -182,7 +247,7 @@ install_client() {
   for skill in session-tag session-save session-summary session-audit; do
     install_managed "$REPO_DIR/skills/$skill/SKILL.md" "skills/$skill/SKILL.md" "skill $skill"
     install_managed "$REPO_DIR/adapters/$client/CLIENT.md" "skills/$skill/CLIENT.md" "$skill adapter"
-    install_managed "$REPO_DIR/scripts/session_save.py" "skills/$skill/scripts/session_save.py" "$skill kernel"
+    install_managed "$REPO_DIR/scripts/session_save_adapter.py" "skills/$skill/scripts/session_save.py" "$skill kernel launcher"
   done
 
   if [ "$client" = "claude" ]; then
@@ -209,13 +274,15 @@ install_client() {
 
 echo "Session Save System v2 installer"
 echo "  shared home: $HOME_DIR"
+echo "  shared kernel: $LIB_DIR/session_save.py"
 echo "  clients: $CLIENTS"
 
+install_shared
 contains_client claude && install_client claude "$CLAUDE_DIR"
 contains_client codex && install_client codex "$AGENTS_DIR"
 
 # The shared home is user data and never enters an ownership manifest.
-python3 "$REPO_DIR/scripts/session_save.py" --home "$HOME_DIR" home --init >/dev/null
+python3 "$LIB_DIR/session_save.py" --home "$HOME_DIR" home --init >/dev/null
 if [ -f "$HOME_DIR/GUIDE.md" ] && ! cmp -s "$REPO_DIR/GUIDE.md" "$HOME_DIR/GUIDE.md"; then
   mkdir -p "$STATE_BACKUP/log-home"
   cp -p "$HOME_DIR/GUIDE.md" "$STATE_BACKUP/log-home/GUIDE.md"
@@ -224,14 +291,14 @@ fi
 cp "$REPO_DIR/GUIDE.md" "$HOME_DIR/GUIDE.md"
 cp "$REPO_DIR/VERSION" "$HOME_DIR/.version" 2>/dev/null || true
 
-migration=$(python3 "$REPO_DIR/scripts/session_save.py" --home "$HOME_DIR" migrate-v1 --client claude --dry-run)
+migration=$(python3 "$LIB_DIR/session_save.py" --home "$HOME_DIR" migrate-v1 --client claude --dry-run)
 count=$(printf '%s' "$migration" | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])')
 
 echo ""
 if [ "$count" -gt 0 ]; then
   echo "Installed, but $count legacy record(s) require copy-first migration before use."
-  echo "Review: python3 \"$REPO_DIR/scripts/session_save.py\" --home \"$HOME_DIR\" migrate-v1 --client claude --dry-run"
-  echo "Apply after review: python3 \"$REPO_DIR/scripts/session_save.py\" --home \"$HOME_DIR\" migrate-v1 --client claude --apply"
+  echo "Review: python3 \"$LIB_DIR/session_save.py\" --home \"$HOME_DIR\" migrate-v1 --client claude --dry-run"
+  echo "Apply after review: python3 \"$LIB_DIR/session_save.py\" --home \"$HOME_DIR\" migrate-v1 --client claude --apply"
 else
   echo "Done. Claude Code and Codex now share: $HOME_DIR"
 fi

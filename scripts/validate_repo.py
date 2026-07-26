@@ -12,9 +12,11 @@ REQUIRED = [
     "README.md", "GUIDE.md", "LICENSE", "SECURITY.md", "PROVENANCE.md",
     "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md", "CITATION.cff",
     "NOTICE", "install.sh", "uninstall.sh", "tests/run.sh",
-    "scripts/session_save.py", "docs/index.html", "docs/styles.css",
+    "scripts/session_save.py", "scripts/session_save_adapter.py",
+    "docs/index.html", "docs/styles.css", "docs/CONTINUITY-IMPLEMENTATION-PLAN.md",
     "docs/PRODUCT-THESIS.md", "docs/ARCHITECTURE.md", "docs/SAFETY-MODEL.md",
     "docs/ROADMAP.md", "docs/decisions/0003-client-neutral-shared-home.md",
+    "docs/decisions/0004-one-installed-kernel.md",
     "adapters/claude/CLIENT.md", "adapters/codex/CLIENT.md",
     "provenance/COMPONENTS.json", "automation/workflows/ci.yml",
     "automation/workflows/pages.yml",
@@ -34,12 +36,13 @@ if missing:
 install = (ROOT / "install.sh").read_text()
 uninstall = (ROOT / "uninstall.sh").read_text()
 kernel = (ROOT / "scripts/session_save.py").read_text()
+launcher = (ROOT / "scripts/session_save_adapter.py").read_text()
 
 if "grep -q \"Session Save System\"" in install + uninstall:
     fail("text-search ownership detection remains")
 for phrase in (
-    "session-save-system.manifest", "hash_file", "AGENTS_CONFIG_DIR",
-    "adapters/$client/CLIENT.md", "scripts/session_save.py",
+    "session-save-system.manifest", "install.manifest", "hash_file", "AGENTS_CONFIG_DIR",
+    "adapters/$client/CLIENT.md", "scripts/session_save_adapter.py", "LIB_DIR/session_save.py",
 ):
     if phrase not in install:
         fail(f"dual-client installer mechanism missing: {phrase}")
@@ -48,6 +51,9 @@ for phrase in ("is_allowed_path", "preserved modified file", "hash_file", "AGENT
         fail(f"dual-client uninstaller mechanism missing: {phrase}")
 if "rm -rf" in uninstall:
     fail("uninstaller must not recursively delete managed paths")
+for phrase in ("SESSION_SAVE_KERNEL", "SESSION_SAVE_LIB_DIR", "os.execv", "is_symlink"):
+    if phrase not in launcher:
+        fail(f"thin kernel launcher mechanism missing: {phrase}")
 
 for phrase in (
     "fcntl.flock", "mutation_lock", "atomic_text", "safe_under", "record_id", "client_id",

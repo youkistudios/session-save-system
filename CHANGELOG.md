@@ -2,6 +2,14 @@
 
 All notable changes to Session Save System are documented here.
 
+## 2.0.0-alpha.2 — 2026-07-26
+
+- Converge eight installed persistence-kernel copies into one manifest-owned canonical kernel under `~/.local/share/session-save/`.
+- Preserve existing skill behavior through tiny path-local compatibility launchers, avoiding GUI-client `PATH` assumptions.
+- Back up managed shared-kernel replacements, reject unowned conflicts, and remove the shared package only when no managed launcher remains.
+- Add continuity-first planning and ADR evidence while keeping schema, commands, aliases, records, and four-moment behavior unchanged.
+- Expand the isolated suite to 23 tests covering shared-kernel ownership, launcher execution, partial uninstall, and modified-kernel preservation.
+
 ## 2.0.0-alpha.1 — 2026-07-23
 
 - Add portable Agent Skill adapters for Claude Code and Codex.

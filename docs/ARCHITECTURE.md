@@ -8,7 +8,11 @@ Claude Code adapter          Codex adapter
           │                         │
           └──── same four Agent Skills ────┐
                                            ▼
-                             Python persistence kernel
+                              thin local launchers
+                                           │
+                                           ▼
+                           one Python persistence kernel
+                      ~/.local/share/session-save/session_save.py
                          identity · events · atomic views
                                            │
                                            ▼
@@ -18,7 +22,7 @@ Claude Code adapter          Codex adapter
 
 ## Portable behavior
 
-Four open-format Agent Skills define Tag, Save, Summarize, and Audit. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` plus the same local kernel. The guide owns product behavior; adapters own invocation and optional host capabilities.
+Four open-format Agent Skills define Tag, Save, Summarize, and Audit. Each installed skill receives a small `CLIENT.md` identifying `claude` or `codex` and a tiny `scripts/session_save.py` compatibility launcher. Every launcher executes the one manifest-owned kernel under `~/.local/share/session-save/`. The guide owns product behavior; adapters own invocation and optional host capabilities.
 
 Claude Code receives slash-command entry points and aliases. Codex discovers the skills from `~/.agents/skills/` and invokes them through skill mention or selection.
 
@@ -85,7 +89,7 @@ The shared config is never an uninstall target.
 
 ## Installation boundary
 
-Claude and Codex have separate SHA-256 ownership manifests and backup trees. Unrelated collisions are skipped. Managed replacements are backed up. Uninstall considers only allowlisted regular files whose current hash matches the manifest.
+Claude and Codex have separate SHA-256 ownership manifests and backup trees. The shared kernel has its own exact manifest. Unrelated client collisions are skipped; an unowned conflicting shared kernel fails installation. Managed replacements are backed up. Uninstall considers only allowlisted regular files whose current hash matches the relevant manifest, and retains the shared kernel while any managed launcher remains.
 
 The shared home, config, legacy sources, migration receipts, and backups are user data and remain untouched.
 
