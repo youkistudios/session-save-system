@@ -64,6 +64,7 @@ The default installs both adapters:
 
 - Claude Code → `~/.claude/skills/` plus local slash-command aliases;
 - Codex → `~/.agents/skills/`;
+- one canonical kernel → `~/.local/share/session-save/session_save.py`;
 - shared config → `~/.config/session-save/config.json`;
 - records → `~/Desktop/session-logs/` unless configured otherwise.
 
@@ -120,7 +121,7 @@ python3 scripts/generate_manifest.py
 python3 scripts/validate_repo.py
 ```
 
-The 20-test suite currently covers dual-client installation, ownership collisions, recoverable updates, isolated namespaces, immutable checkpoints, 24 simultaneous writes, copy-first migration, global audits, proof-based uninstall, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
+The 23-test suite currently covers one-kernel installation, thin launchers, shared/client ownership collisions, recoverable updates, partial and proof-based uninstall, isolated namespaces, immutable checkpoints, 24 simultaneous writes, copy-first migration, global audits, client ownership, symlink containment, traversal rejection, and skill-contract alignment.
 
 ## Safety contract
 
