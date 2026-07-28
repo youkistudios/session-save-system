@@ -2,22 +2,19 @@
 
 ![Session Save System — one memory home for Claude Code and Codex](docs/assets/session-save-header.svg)
 
-**One memory home. Two agent clients. Four deliberate moments.** Session Save is a local session-memory architecture that turns captured context, decisions, progress, artifact references, and next state into source-attributed records you own.
+**Save work in Claude Code, resume it in Codex, or go the other way.** Session Save writes local records of decisions, progress, referenced files, and next steps while keeping the client that produced each record visible.
 
 [Open the site](https://youkistudios.github.io/session-save-system/) · [Read the usage guide](USAGE.md) · [See the architecture](docs/ARCHITECTURE.md) · [Review the safety model](docs/SAFETY-MODEL.md)
 
-> **Status: v2.0 alpha.5, tested local kernel.** Installer, recovery, migration, namespace, concurrency, index, audit-input, Pickup read boundaries, and uninstall behavior are exercised in isolated tests. Real Claude → Codex and Codex → Claude Pickup journeys are witnessed on macOS with disclosure, refusal, consent-bound reads, exact citations, action confirmation, canary containment, and byte-identical before/after trees.
+> **Status: v2.0 alpha.5.** Isolated tests cover installation, recovery, migration, simultaneous writes, indexes, bounded reads, and uninstall behavior. Claude-to-Codex and Codex-to-Claude resume flows have also been run on macOS. Windows and clients other than Claude Code and Codex are not yet supported.
 
-## The problem
+## Why use it
 
-AI work now crosses clients, but session memory remains trapped inside each chat list. Claude can research a project, Codex can implement it, and neither record naturally tells the same project story. Throwing both into one undifferentiated folder creates collisions and erases provenance.
+AI work often moves between clients, while each chat history stays separate. Claude Code might research a project and Codex might implement it, but neither client can reliably reconstruct the other conversation.
 
-Session Save keeps one local home while preserving both truths:
+Session Save gives both clients one local record directory. Records are grouped by the project name you approve, and every record keeps the client session that created it.
 
-1. all records belong to the user’s projects;
-2. every record retains the client session that produced it.
-
-## The product model
+## The four moments
 
 | Moment | Claude Code | Codex | Outcome |
 |---|---|---|---|
@@ -26,9 +23,9 @@ Session Save keeps one local home while preserving both truths:
 | **Close** | `/session-close` | `$session-close` / Skills | Human close-out and technical resume state |
 | **Review** | `/session-review` | `$session-review` / Skills | One source-attributed project view across clients |
 
-The public lifecycle names are additive wrappers. The established canonical skills—`session-save` (`/ss`), `session-summary` (`/ssum`), and `session-audit` (`/sa`)—remain installed and unchanged.
+The clearer lifecycle names are aliases. Existing users can continue to use `session-save` (`/ss`), `session-summary` (`/ssum`), and `session-audit` (`/sa`).
 
-**Pickup is the way back in, not a fifth moment.** In a fresh session use `/session-pickup` in Claude Code or `$session-pickup` in Codex. Select one exact approved project and saved session, review which bounded notes would be read, consent to the cited handover, then confirm the proposed next action. Pickup creates no record or continuation lineage.
+The four moments above write or summarize records. **Pickup is a separate, read-only resume command**, not a fifth writing moment. In a fresh session, run `/session-pickup` in Claude Code or `$session-pickup` in Codex. Choose an approved project and saved session, review which notes the command proposes to read, consent to that handover, and confirm the next action. Pickup does not create a new record.
 
 ## Shared file model
 
@@ -61,6 +58,15 @@ git clone https://github.com/youkistudios/session-save-system
 cd session-save-system
 ./install.sh
 ```
+
+Start new Claude Code and Codex sessions after installation. A minimal cross-client journey is:
+
+1. In Claude Code, run `/session-tag`, choose or approve the project name, and follow the prompt to checkpoint or close the work.
+2. Open a fresh Codex session and run `$session-pickup`.
+3. Choose the same project and exact saved session, review the proposed files, and consent to the handover.
+4. Confirm the next action. Run `$session-checkpoint` later if the new work should be saved.
+
+The same journey works in the other direction by swapping the clients.
 
 The default installs both adapters:
 
